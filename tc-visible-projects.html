@@ -1,0 +1,137 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
+
+<script src="./../lodash/lodash.min.js"></script>
+<script src="./TcVisibleProjectsBehavior.js"></script>
+<script src="./libs/ajax.js"></script>
+
+<!--
+`tc-visible-projects`
+Teamcity component - Configure Visible Projects
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--tc-text-color` | Main text color| #000
+`--tc-primary-color` | Main text color| #0CB0F2
+`--tc-secondary-color` | Main text color| #39E865
+
+@demo demo/index.html
+-->
+
+<dom-module id="tc-visible-projects">
+    <template>
+        <style is="custom-style" include="iron-flex iron-flex-alignment">
+            :host {
+                display: block;
+                color: var(--tc-text-color, rgba(0,0,0,.87));
+            }
+
+            #body {
+                width: 100%;
+
+                table-layout: fixed;
+                border-collapse: collapse;
+                border-spacing: 0;
+            }
+
+            #hiddenProjectsFilter {
+                outline: none;
+                margin: 0;
+                padding: 0;
+                font-size: .9em;
+                height: 1.3em;
+                border: none;
+                border-bottom: 1px solid rgba(0,0,0,.12);
+            }
+            #hiddenProjectsFilter:focus {
+                border-bottom-width: 2px;
+                border-bottom-color: var(--tc-primary-color, rgba(0,0,0,.87));
+            }
+
+            .projects-container {
+                width: 45%;
+            }
+
+            .projects_selector {
+                height: 325px;
+                overflow: auto;
+            }
+        </style>
+
+        <table id="body">
+            <tbody>
+                <tr>
+                    <td class="projects-container">
+                        <div>
+                            <strong>My visible projects</strong>
+                        </div>
+                        <br>
+                        <div class="projects_selector"></div>
+                    </td>
+
+                    <td class="projects-container">
+                        <div class="layout horizontal">
+                            <strong>Find projects:</strong>
+                            &nbsp;&nbsp;
+                            <input id="hiddenProjectsFilter" class="flex" type="text" placeholder="By name..."
+                                   on-input="_onFilterChange">
+                        </div>
+                        <br>
+                        <div id="hiddenProjectsSelector" class="projects_selector"></div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </template>
+
+    <script>
+        (function () {
+            Polymer({
+                is: 'tc-visible-projects',
+                behaviors: [ Polymer.jb.TcVisibleProjectsBehavior ],
+
+                properties: {
+                    url: String
+                },
+
+                ready: function () {
+                    var projectTemplate = this.queryEffectiveChildren('template[name="group-template"]');
+                    projectTemplate = projectTemplate ? projectTemplate.innerHTML.trim() : null;
+
+                    this._init(projectTemplate);
+                    this.loadProjects(this.url);
+                },
+
+                attached: function () {
+                    this.$.hiddenProjectsFilter.focus();
+                },
+
+                _uiSetLoading: function (isOn) {
+//                    console.log('I am ', isOn ? 'loading' : 'not loading', ' now');
+                },
+
+                _uiGetFilter: function () {
+                    return this.$.hiddenProjectsFilter.value.trim();
+                },
+
+                _uiShowProjectNodes: function (nodes) {
+                    this.$.hiddenProjectsSelector.innerHTML = nodes.join('');
+                },
+
+                _uiShowError: function (message) {
+//                    console.log(error.message);
+                },
+
+                _onFilterChange: _.debounce(function (e) {
+                    e.stopPropagation();
+                    this._projectNodes = this._getFilteredProjects(this._projects, this._uiGetFilter(), this._groupTemplate);
+                    this._uiShowProjectNodes(this._projectNodes);
+                }, 300)
+            });
+        })()
+    </script>
+</dom-module>

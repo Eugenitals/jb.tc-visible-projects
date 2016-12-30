@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+    <title>tc-visible-projects demo</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+    <!--[if IE]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.7/es5-shim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.7/es5-sham.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/2014.01.31/classList.min.js"></script>
+    <![endif]-->
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+    <link rel="import" href="../tc-visible-projects.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+        demo-snippet {
+            width: 100%;
+        }
+
+        .tc-visible-projects__project {
+
+        }
+    </style>
+</head>
+<body>
+
+<div class="vertical-section-container">
+    <demo-snippet>
+        <template>
+            <style is="custom-style">
+                tc-visible-projects {
+                    --tc-primary-color: #5889a6;
+                }
+
+                .tc-visible-projects__project {
+                    padding: 3px;
+                }
+            </style>
+
+            <tc-visible-projects url="projects.json">
+                <template name="group-template">
+                    <div class="tc-visible-projects__project">${ name }</div>
+                </template>
+            </tc-visible-projects>
+        </template>
+    </demo-snippet>
+</div>
+
+</body>
+</html>
