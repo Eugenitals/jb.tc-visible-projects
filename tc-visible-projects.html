@@ -1,5 +1,6 @@
 <link rel="import" href="../polymer/polymer.html">
-<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
 
 <script src="./../lodash/lodash.min.js"></script>
 <script src="./TcVisibleProjectsBehavior.js"></script>
@@ -24,10 +25,14 @@ Custom property | Description | Default
 
 <dom-module id="tc-visible-projects">
     <template>
-        <style is="custom-style" include="iron-flex iron-flex-alignment">
+        <style is="custom-style">
             :host {
+                --tc-text-color: rgba(0,0,0,.87);
+                --tc-primary-color: rgba(0,0,0,.87);
+                --tc-secondary-color: rgba(0,0,0,.87);
+
                 display: block;
-                color: var(--tc-text-color, rgba(0,0,0,.87));
+                color: var(--tc-text-color);
             }
 
             #body {
@@ -39,26 +44,71 @@ Custom property | Description | Default
             }
 
             #hiddenProjectsFilter {
-                outline: none;
-                margin: 0;
-                padding: 0;
-                font-size: .9em;
+                display: block;
+                width: 100%;
                 height: 1.3em;
+
+                outline: none;
+                margin: 0 0 1px 0;
+                padding: 0 0 1px 0;
+                font-size: inherit;
+
                 border: none;
                 border-bottom: 1px solid rgba(0,0,0,.12);
             }
             #hiddenProjectsFilter:focus {
+                margin-bottom: 0;
+
                 border-bottom-width: 2px;
-                border-bottom-color: var(--tc-primary-color, rgba(0,0,0,.87));
+                border-bottom-color: var(--tc-primary-color);
             }
 
-            .projects-container {
-                width: 45%;
+            #searchIcon {
+                position: absolute;
+                top: 0;
+                right: 0;
+                z-index: 100;
+
+                width: 20px;
+                height: 20px;
+
+                opacity: .3;
             }
 
-            .projects_selector {
+            td.projects-container {
+                width: 50%;
+                border-left: 1px solid rgba(0,0,0,.12);
+
+                padding-left: 16px;
+                padding-right: 16px;
+
+                vertical-align: top;
+            }
+
+            .projects-container:first-of-type {
+                border-left: none;
+                padding-left: 0;
+            }
+
+            .projects-container__title {
+                position: relative;
+                font-size: 1.1em;
+                height: 32px;
+            }
+
+            .projects-container__selector {
                 height: 325px;
                 overflow: auto;
+            }
+
+            .text-secondary {
+                color: var(--tc-text-color, rgba(0,0,0,.54));
+            }
+
+            .href-action {
+                text-decoration: none;
+                color: var(--tc-primary-color);
+                border-bottom: 1px dotted var(--tc-primary-color);
             }
         </style>
 
@@ -66,22 +116,39 @@ Custom property | Description | Default
             <tbody>
                 <tr>
                     <td class="projects-container">
-                        <div>
+                        <div class="projects-container__title">
                             <strong>My visible projects</strong>
                         </div>
-                        <br>
-                        <div class="projects_selector"></div>
+                        <div class="projects-container__selector">
+                            <!-- ...visible projects will be here... -->
+                        </div>
                     </td>
 
                     <td class="projects-container">
-                        <div class="layout horizontal">
-                            <strong>Find projects:</strong>
-                            &nbsp;&nbsp;
-                            <input id="hiddenProjectsFilter" class="flex" type="text" placeholder="By name..."
-                                   on-input="_onFilterChange">
+                        <div class="projects-container__title">
+                            <!-- "keyup" event used here instead of "input" due to IE9 compatibility -->
+                            <input id="hiddenProjectsFilter" type="text"
+                                   placeholder="Find projects by name..."
+                                   on-keyup="_onFilterKeyup">
+
+                            <!-- Just meaningful icon -->
+                            <iron-icon id="searchIcon" icon="icons:search"></iron-icon>
                         </div>
-                        <br>
-                        <div id="hiddenProjectsSelector" class="projects_selector"></div>
+
+                        <div class="projects-container__selector">
+                            <template is="dom-if" if="[[_ioIsShowAllProjectsVisible]]">
+                                <div class="text-secondary">
+                                    <strong>[[_ioProjectsNodes.length]]</strong> projects found.
+                                    <a class="href-action" href="#" on-tap="_onShowAllTap">
+                                        Click or "<strong>↓</strong>" to show all
+                                    </a>
+                                </div>
+                            </template>
+
+                            <div id="hiddenProjectsSelector">
+                                <!-- ...hidden projects will be here... -->
+                            </div>
+                        </div>
                     </td>
                 </tr>
             </tbody>
@@ -90,13 +157,40 @@ Custom property | Description | Default
 
     <script>
         (function () {
+            var Keycodes = {
+                UP: 38,
+                DOWN: 40,
+                ENTER: 13,
+                ESC: 27
+            };
+
             Polymer({
                 is: 'tc-visible-projects',
                 behaviors: [ Polymer.jb.TcVisibleProjectsBehavior ],
 
                 properties: {
-                    url: String
+                    /**
+                     * Url to load json data
+                     */
+                    url: String,
+
+                    /**
+                     * Maximum number of projects to display without "Show all..."
+                     */
+                    projectsDisplayLimit: {
+                        type: Number,
+                        value: 500
+                    }
                 },
+
+                /** @type {String} */
+                _ioLastFilterValue: '',
+
+                /** @type {Boolean} */
+                _ioIsShowAllProjectsVisible: false,
+
+                /** @type {Array<String>} */
+                _ioProjectsNodes: null,
 
                 ready: function () {
                     var projectTemplate = this.queryEffectiveChildren('template[name="group-template"]');
@@ -107,7 +201,9 @@ Custom property | Description | Default
                 },
 
                 attached: function () {
-                    this.$.hiddenProjectsFilter.focus();
+                    this.async(function () {
+                        this.$.hiddenProjectsFilter.focus();
+                    });
                 },
 
                 _ioSetLoading: function (isOn) {
@@ -118,19 +214,67 @@ Custom property | Description | Default
                     return this.$.hiddenProjectsFilter.value.trim();
                 },
 
-                _ioShowProjectNodes: function (nodes) {
-                    this.$.hiddenProjectsSelector.innerHTML = nodes.join('');
+                _ioShowProjectNodes: function (nodes, isForced) {
+                    this._ioProjectsNodes = nodes;
+
+                    if (!!isForced || this._ioProjectsNodes.length <= this.projectsDisplayLimit) {
+                        this._ioIsShowAllProjectsVisible = false;
+                        this.$.hiddenProjectsSelector.innerHTML = nodes.join('');
+                    } else {
+                        this._ioIsShowAllProjectsVisible = true;
+                        this.$.hiddenProjectsSelector.innerHTML = '';
+                    }
                 },
 
                 _ioShowError: function (message) {
 //                    console.log(error.message);
                 },
 
-                _onFilterChange: _.debounce(function (e) {
-                    e.stopPropagation();
-                    this._projectNodes = this._getFilteredProjects(this._projects, this._ioGetFilter(), this._groupTemplate);
+                _ioApplyFilter: _.debounce(function (filter) {
+                    // Coz we use "keyup" event we should ensure that our filter is changed
+                    if (filter === this._ioLastFilterValue) {
+                        return;
+                    }
+
+                    this._ioLastFilterValue = filter;
+                    this._projectNodes =
+                        this._getFilteredProjects(this._projects, this._ioLastFilterValue, this._groupTemplate);
                     this._ioShowProjectNodes(this._projectNodes);
-                }, 300)
+                }, 300),
+
+                _ioSelectNextProject: function () {
+                    if (this._ioIsShowAllProjectsVisible) {
+                        this._ioShowProjectNodes(this._ioProjectsNodes, true);
+                    }
+
+                    //todo: impl
+                },
+
+                _ioSelectPrevProject: function () {
+                    //todo: impl
+                },
+
+                _onFilterKeyup: function (e) {
+                    e.stopPropagation();
+
+                    switch (e.keyCode) {
+                        case Keycodes.DOWN:
+                            this._ioSelectNextProject();
+                            break;
+                        case Keycodes.UP:
+                            this._ioSelectPrevProject();
+                            break;
+                        case Keycodes.ENTER:
+                            break;
+                        default:
+                            this._ioApplyFilter(this._ioGetFilter());
+                    }
+                },
+
+                _onShowAllTap: function (e) {
+                    e.stopPropagation();
+                    this._ioShowProjectNodes(this._ioProjectsNodes, true);
+                }
             });
         })()
     </script>

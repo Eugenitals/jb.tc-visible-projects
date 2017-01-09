@@ -71,6 +71,7 @@
 
         _getFilteredProjects: function (projects, filter, template) {
             var result = [];
+            filter = filter.toLowerCase();
 
             projects.forEach(function (_project) {
                 if (_project.__key.indexOf(filter) !== -1) {
