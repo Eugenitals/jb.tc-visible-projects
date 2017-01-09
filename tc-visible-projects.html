@@ -110,26 +110,26 @@ Custom property | Description | Default
                     this.$.hiddenProjectsFilter.focus();
                 },
 
-                _uiSetLoading: function (isOn) {
+                _ioSetLoading: function (isOn) {
 //                    console.log('I am ', isOn ? 'loading' : 'not loading', ' now');
                 },
 
-                _uiGetFilter: function () {
+                _ioGetFilter: function () {
                     return this.$.hiddenProjectsFilter.value.trim();
                 },
 
-                _uiShowProjectNodes: function (nodes) {
+                _ioShowProjectNodes: function (nodes) {
                     this.$.hiddenProjectsSelector.innerHTML = nodes.join('');
                 },
 
-                _uiShowError: function (message) {
+                _ioShowError: function (message) {
 //                    console.log(error.message);
                 },
 
                 _onFilterChange: _.debounce(function (e) {
                     e.stopPropagation();
-                    this._projectNodes = this._getFilteredProjects(this._projects, this._uiGetFilter(), this._groupTemplate);
-                    this._uiShowProjectNodes(this._projectNodes);
+                    this._projectNodes = this._getFilteredProjects(this._projects, this._ioGetFilter(), this._groupTemplate);
+                    this._ioShowProjectNodes(this._projectNodes);
                 }, 300)
             });
         })()

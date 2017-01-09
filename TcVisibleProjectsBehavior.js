@@ -16,7 +16,7 @@
                 return;
             }
 
-            this._uiSetLoading(true);
+            this._ioSetLoading(true);
 
             new Ajax(url, {
                 context: this,
@@ -36,7 +36,7 @@
                     this._onProjectsLoadError(new Error(Errors.COMMUNICATION_ERROR({ url: ajax.url, status: status })));
                 },
                 done: function () {
-                    this._uiSetLoading(false);
+                    this._ioSetLoading(false);
                 }
             });
         },
@@ -87,8 +87,8 @@
          */
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
-            this._projectNodes = this._getFilteredProjects(this._projects, this._uiGetFilter(), this._groupTemplate);
-            this._uiShowProjectNodes(this._projectNodes);
+            this._projectNodes = this._getFilteredProjects(this._projects, this._ioGetFilter(), this._groupTemplate);
+            this._ioShowProjectNodes(this._projectNodes);
         },
 
         /**
@@ -96,7 +96,7 @@
          * @private
          */
         _onProjectsLoadError: function (error) {
-            this._uiShowError(error.message);
+            this._ioShowError(error.message);
         }
     };
 })(window.Polymer || {});
