@@ -71,8 +71,14 @@
 
         _getFilteredProjects: function (projects, filter, template) {
             var result = [];
-            filter = filter.toLowerCase();
 
+            if (! projects.length) {
+                return result;
+            }
+
+            // Remove Root project
+            projects.shift();
+            filter = filter.toLowerCase();
             projects.forEach(function (_project) {
                 if (_project.__key.indexOf(filter) !== -1) {
                     result.push(template(_project));
