@@ -16,16 +16,14 @@
 
     <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
     <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+    <link rel="import" href="../../iron-icon/iron-icon.html">
 
     <link rel="import" href="../tc-visible-projects.html">
 
     <style is="custom-style" include="demo-pages-shared-styles">
         demo-snippet {
             width: 100%;
-        }
-
-        .tc-visible-projects__project {
-
         }
     </style>
 </head>
@@ -40,18 +38,29 @@
                 }
 
                 .tc-visible-projects__project {
+                    font-size: 12px;
                     padding: 2px;
                 }
-
                 .tc-visible-projects__project:nth-of-type(2n) {
                     background-color: rgba(88, 137, 166,.05);
                 }
+                .tc-visible-projects__project img {
+                    width: 20px;
+                    height: 20px;
+                    vertical-align: middle;
+                    margin: -1px 0;
+                }
             </style>
 
-            <tc-visible-projects url="projects.json">
+            <tc-visible-projects url="projects.json" projects-display-limit="1000">
+
+                <!-- Example of group customisation -->
                 <template name="group-template">
-                    <div class="tc-visible-projects__project">${ name }</div>
+                    <div class="tc-visible-projects__project">
+                        <img src="bookmark-outline.png"> ${name}
+                    </div>
                 </template>
+
             </tc-visible-projects>
         </template>
     </demo-snippet>
