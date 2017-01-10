@@ -12,7 +12,8 @@
 
     var Classes = {
         PROJECT: 'project-item',
-        PROJECT_LEVEL: 'project-item__level'
+        PROJECT_LEVEL: 'project-item__level',
+        HIGHLIGHT: 'highlight'
     };
 
     Polymer.jb = Polymer.jb || {};
@@ -71,12 +72,10 @@
         _init: function (projectTemplate) {
             projectTemplate = projectTemplate || '${name}';
             this._groupTemplate = _.template([
-                    '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL + '${_level}">',
-                        projectTemplate,
-                    '</div>'
-                ].join(''),
-                { escape: /\${([\s\S]+?)}/g }
-            );
+                '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL + '${_level}">',
+                    projectTemplate,
+                '</div>'
+            ].join(''));
             this._projectNodes = [];
         },
 
@@ -131,7 +130,21 @@
                 _project = projects[i];
 
                 if (_project._key.indexOf(filter) !== -1) {
-                    nodes.push(template(_project));
+                    nodes.push(
+                        template(
+                            /**
+                             * Creates new object because we don`t know which properties from original project object
+                             * will be used in project item custom template, so we need them all.
+                             * Also highlight the name parts
+                             */
+                            _.create(_project, {
+                                name: _project.name.replace(
+                                    new RegExp('(' + filter + ')', 'i'),
+                                    '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
+                                )
+                            })
+                        )
+                    );
                 }
             }
 

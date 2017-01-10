@@ -16,6 +16,7 @@ Name | Type | Description | Default
 `--tc-text-color` | Prop | Text color | #000000
 `--tc-primary-color` | Prop |  Application primary color | #0CB0F2
 `--tc-secondary-color` | Prop |  Application secondary color | #39E865
+`--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-item` | Mixin |  Applied to a project item | {}
 `--tc-project-selector-item-hover` | Mixin |  Applied to a project item :hover | {}
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item :nth-of-type(2n)  | {}
@@ -30,6 +31,7 @@ Name | Type | Description | Default
                 --tc-text-color: rgba(0,0,0,.87);
                 --tc-primary-color: rgba(0,0,0,.87);
                 --tc-secondary-color: rgba(0,0,0,.87);
+                --tc-project-selector-highlight-color: #ffff80;
 
                 display: block;
                 color: var(--tc-text-color);
@@ -85,6 +87,10 @@ Name | Type | Description | Default
                 text-decoration: none;
                 color: var(--tc-primary-color);
                 border-bottom: 1px dotted var(--tc-primary-color);
+            }
+
+            .highlight {
+                background-color: var(--tc-project-selector-highlight-color);
             }
 
             .projects-container {
