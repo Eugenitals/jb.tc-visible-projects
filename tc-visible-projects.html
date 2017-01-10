@@ -17,6 +17,7 @@ Name | Type | Description | Default
 `--tc-primary-color` | Prop |  Application primary color | #0CB0F2
 `--tc-secondary-color` | Prop |  Application secondary color | #39E865
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
+`--tc-project-selector-height` | Prop | Height of project tree (final height will be +32px) | 368px
 `--tc-project-selector-item` | Mixin |  Applied to a project item | {}
 `--tc-project-selector-item-hover` | Mixin |  Applied to a project item :hover | {}
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item :nth-of-type(2n)  | {}
@@ -31,6 +32,7 @@ Name | Type | Description | Default
                 --tc-text-color: rgba(0,0,0,.87);
                 --tc-primary-color: rgba(0,0,0,.87);
                 --tc-secondary-color: rgba(0,0,0,.87);
+                --tc-project-selector-height: 368px;
                 --tc-project-selector-highlight-color: #ffff80;
 
                 display: block;
@@ -96,10 +98,7 @@ Name | Type | Description | Default
             .projects-container {
                 width: 50%;
                 border-left: 1px solid rgba(0,0,0,.12);
-
-                padding-left: 16px;
-                padding-right: 16px;
-
+                padding: 0 16px;
                 vertical-align: top;
             }
 
@@ -115,7 +114,7 @@ Name | Type | Description | Default
             }
 
             .projects-container__selector {
-                height: 325px;
+                height: var(--tc-project-selector-height);
                 overflow: auto;
             }
 
@@ -270,8 +269,22 @@ Name | Type | Description | Default
                     return this.$.hiddenProjectsFilter.value.trim();
                 },
 
-                _ioShowError: function (message) {
-//                    console.log(error.message);
+                /**
+                 * Fired when error is thrown.
+                 *
+                 *     'event.detail.message' {String} error message
+                 *     'event.detail.code' {String} error code
+                 *
+                 * @event error
+                 */
+
+                /**
+                 * Dispatch 'error' event
+                 * @param message {String}
+                 * @param code {String}
+                 */
+                _ioShowError: function (message, code) {
+                    this.fire('error', { message: message, code: code });
                 },
 
                 /**
@@ -294,6 +307,7 @@ Name | Type | Description | Default
                 },
 
                 _ioApplyCurrentFilter: _.debounce(function () {
+                    var ts = (new Date()).getTime();
                     var filter = this._ioGetFilter();
 
                     // Coz we use "keyup" event we should ensure that our filter is changed
@@ -304,6 +318,7 @@ Name | Type | Description | Default
                     this._lastFilterValue = filter;
                     this._projectsNodes = this._filterProjectsNodes(filter);
                     this._showProjectNodes(this._projectsNodes);
+                    console.log((new Date()).getTime() - ts);
                 }, 300),
 
                 /**
