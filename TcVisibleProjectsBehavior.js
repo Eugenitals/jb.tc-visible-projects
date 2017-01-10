@@ -1,3 +1,7 @@
+/**
+ @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior
+ */
+
 "use strict";
 
 (function (Polymer, Ajax, _) {
@@ -12,7 +16,7 @@
 
     Polymer.jb = Polymer.jb || {};
 
-    /** @polymerBehavior */
+    /** @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior */
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
          * @param url {String}
