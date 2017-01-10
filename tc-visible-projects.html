@@ -14,18 +14,21 @@ Teamcity component - Configure Visible Projects
 
 The following custom properties and mixins are available for styling:
 
-Custom property | Description | Default
+Name | Type | Description | Default
 ----------------|-------------|----------
-`--tc-text-color` | Main text color| #000
-`--tc-primary-color` | Main text color| #0CB0F2
-`--tc-secondary-color` | Main text color| #39E865
+`--tc-text-color` | Prop | Text color | #000000
+`--tc-primary-color` | Prop |  Application primary color | #0CB0F2
+`--tc-secondary-color` | Prop |  Application secondary color | #39E865
+`--tc-project-selector-item` | Mixin |  Applied to a project item | {}
+`--tc-project-selector-item-hover` | Mixin |  Applied to a project item :hover | {}
+`--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item :nth-of-type(2n)  | {}
 
 @demo demo/index.html
 -->
 
 <dom-module id="tc-visible-projects">
     <template>
-        <style is="custom-style">
+        <style>
             :host {
                 --tc-text-color: rgba(0,0,0,.87);
                 --tc-primary-color: rgba(0,0,0,.87);
@@ -49,6 +52,8 @@ Custom property | Description | Default
                 height: 1.3em;
 
                 outline: none;
+                background-color: transparent;
+
                 margin: 0 0 1px 0;
                 padding: 0 0 1px 0;
                 font-size: inherit;
@@ -75,7 +80,17 @@ Custom property | Description | Default
                 opacity: .3;
             }
 
-            td.projects-container {
+            .text-secondary {
+                color: var(--tc-text-color, rgba(0,0,0,.54));
+            }
+
+            .href-action {
+                text-decoration: none;
+                color: var(--tc-primary-color);
+                border-bottom: 1px dotted var(--tc-primary-color);
+            }
+
+            .projects-container {
                 width: 50%;
                 border-left: 1px solid rgba(0,0,0,.12);
 
@@ -101,14 +116,15 @@ Custom property | Description | Default
                 overflow: auto;
             }
 
-            .text-secondary {
-                color: var(--tc-text-color, rgba(0,0,0,.54));
+            .project-item {
+                cursor: default;
+                @apply(--tc-project-selector-item);
             }
-
-            .href-action {
-                text-decoration: none;
-                color: var(--tc-primary-color);
-                border-bottom: 1px dotted var(--tc-primary-color);
+            .project-item:hover {
+                @apply(--tc-project-selector-item-hover);
+            }
+            .project-item:nth-of-type(2n) {
+                @apply(--tc-project-selector-item-nth-even);
             }
         </style>
 
@@ -120,7 +136,9 @@ Custom property | Description | Default
                             <strong>My visible projects</strong>
                         </div>
                         <div class="projects-container__selector">
-                            <!-- ...visible projects will be here... -->
+                            <div id="visibleProjectsSelector">
+                                <!-- ...visible projects will be here... -->
+                            </div>
                         </div>
                     </td>
 
@@ -136,6 +154,11 @@ Custom property | Description | Default
                         </div>
 
                         <div class="projects-container__selector">
+
+                            <template is="dom-if" if="[[_ioIsLoading]]">
+                                <div class="text-secondary">Loading projects...</div>
+                            </template>
+
                             <template is="dom-if" if="[[_ioIsShowAllProjectsVisible]]">
                                 <div class="text-secondary">
                                     <strong>[[_ioProjectsNodes.length]]</strong> projects found.
@@ -179,7 +202,7 @@ Custom property | Description | Default
                      */
                     projectsDisplayLimit: {
                         type: Number,
-                        value: 500
+                        value: 100
                     }
                 },
 
@@ -188,6 +211,9 @@ Custom property | Description | Default
 
                 /** @type {Boolean} */
                 _ioIsShowAllProjectsVisible: false,
+
+                /** @type {Boolean} */
+                _ioIsLoading: false,
 
                 /** @type {Array<String>} */
                 _ioProjectsNodes: null,
@@ -201,13 +227,14 @@ Custom property | Description | Default
                 },
 
                 attached: function () {
+                    // Wait ~10 ms until local DOM initialized
                     this.async(function () {
                         this.$.hiddenProjectsFilter.focus();
-                    });
+                    }, null, 10);
                 },
 
                 _ioSetLoading: function (isOn) {
-//                    console.log('I am ', isOn ? 'loading' : 'not loading', ' now');
+                    this._ioIsLoading = isOn;
                 },
 
                 _ioGetFilter: function () {
@@ -219,10 +246,10 @@ Custom property | Description | Default
 
                     if (!!isForced || this._ioProjectsNodes.length <= this.projectsDisplayLimit) {
                         this._ioIsShowAllProjectsVisible = false;
-                        this.$.hiddenProjectsSelector.innerHTML = nodes.join('');
+                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
                     } else {
                         this._ioIsShowAllProjectsVisible = true;
-                        this.$.hiddenProjectsSelector.innerHTML = '';
+                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = '';
                     }
                 },
 

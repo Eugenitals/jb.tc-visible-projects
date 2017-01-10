@@ -6,6 +6,10 @@
         CAN_NOT_PARSE_RESPONSE: 'Error while parse response'
     };
 
+    var Classes = {
+        PROJECT: 'project-item'
+    };
+
     Polymer.jb = Polymer.jb || {};
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
@@ -50,9 +54,16 @@
         /** @type {Array<String>} */
         _projectNodes: null,
 
+        /** @type {Object} */
+        _Classes: Classes,
+
         _init: function (projectTemplate) {
-            this._groupTemplate = _.template(
-                projectTemplate || '<div><%= name %></div>',
+            projectTemplate = projectTemplate || '${name}';
+            this._groupTemplate = _.template([
+                    '<div class="' + Classes.PROJECT + '">',
+                        projectTemplate,
+                    '</div>'
+                ].join(''),
                 { escape: /\${([\s\S]+?)}/g }
             );
             this._projectNodes = [];

@@ -35,31 +35,30 @@
             <style is="custom-style">
                 tc-visible-projects {
                     --tc-primary-color: #5889a6;
-                }
 
-                .tc-visible-projects__project {
-                    font-size: 12px;
-                    padding: 2px;
-                }
-                .tc-visible-projects__project:nth-of-type(2n) {
-                    background-color: rgba(88, 137, 166,.05);
-                }
-                .tc-visible-projects__project img {
-                    width: 20px;
-                    height: 20px;
-                    vertical-align: middle;
-                    margin: -1px 0;
+                    --tc-project-selector-item: {
+                        padding: 2px;
+                        padding-left: 22px;
+                        background: url(bookmark-outline.png) no-repeat 0px 0px;;
+                    };
+
+                    --tc-project-selector-item-hover: {
+                        font-weight: bold;
+                    };
+                    --tc-project-selector-item-nth-even: {
+                        background-color: rgba(88, 137, 166, .05);
+                    };
                 }
             </style>
 
             <tc-visible-projects url="projects.json" projects-display-limit="1000">
 
-                <!-- Example of group customisation -->
-                <template name="group-template">
-                    <div class="tc-visible-projects__project">
-                        <img src="bookmark-outline.png"> ${name}
-                    </div>
-                </template>
+                <!-- Example of group HTML customisation
+
+                    <template name="group-template">
+                        <img src="bookmark-outline.png" style="width: 20px; height: 20px; vertical-align: middle; margin: -1px 0;"> ${name}
+                    </template>
+                -->
 
             </tc-visible-projects>
         </template>
