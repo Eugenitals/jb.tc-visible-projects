@@ -37,10 +37,7 @@
                     --tc-primary-color: #5889a6;
 
                     --tc-project-selector-item: {
-                        padding: 2px;
-                        padding-left: 22px;
-                        background: url('bookmark-outline.svg') no-repeat left center;
-                        background-size: 20px 20px;
+                        border-bottom: 1px dashed rgba(0,0,0,.1);
                     };
 
                     --tc-project-selector-item-nth-even: {
@@ -55,12 +52,14 @@
 
             <tc-visible-projects url="projects.json" projects-display-limit="1000">
 
-                <!-- Example of group HTML customisation
-
-                    <template name="group-template">
-                        <img src="bookmark-outline.png" style="width: 20px; height: 20px; vertical-align: middle; margin: -1px 0;"> ${name}
-                    </template>
-                -->
+                <!-- Example of group HTML customisation (only online styles supported) -->
+                <template name="group-template">
+                    <div style="padding: 2px 2px 2px 22px;
+                                background: url('bookmark-outline.svg') no-repeat left center;
+                                background-size: 20px 20px;">
+                        ${name}
+                    </div>
+                </template>
 
             </tc-visible-projects>
         </template>

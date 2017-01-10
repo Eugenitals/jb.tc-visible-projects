@@ -11,7 +11,8 @@
     };
 
     var Classes = {
-        PROJECT: 'project-item'
+        PROJECT: 'project-item',
+        PROJECT_LEVEL: 'project-item__level'
     };
 
     Polymer.jb = Polymer.jb || {};
@@ -52,6 +53,9 @@
             });
         },
 
+        /** @type {Object} */
+        _Classes: Classes,
+
         /** @type {Function} */
         _groupTemplate: null,
 
@@ -61,13 +65,13 @@
         /** @type {Array<String>} */
         _projectNodes: null,
 
-        /** @type {Object} */
-        _Classes: Classes,
+        /** @type {String} */
+        _rootProjectId: null,
 
         _init: function (projectTemplate) {
             projectTemplate = projectTemplate || '${name}';
             this._groupTemplate = _.template([
-                    '<div class="' + Classes.PROJECT + '">',
+                    '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL + '${_level}">',
                         projectTemplate,
                     '</div>'
                 ].join(''),
@@ -81,10 +85,30 @@
          * @private
          */
         _parseProjects: function (rawProjects) {
-            return rawProjects.map(function (_project) {
-                _project.__key = _project.name.toLowerCase();
-                return _project;
-            });
+            var result = [];
+            result._index = {};
+
+            // Handle Root project
+            var _project = rawProjects[0];
+            _project._level = 0;
+            _project._key = '';
+
+            result.push(_project);
+            result._index[_project.id] = _project;
+
+            // Save root project ID
+            this._rootProjectId = _project.id;
+
+            for (var i = 1, len = rawProjects.length; i < len; i++ ) {
+                _project = rawProjects[i];
+                _project._level = result._index[_project.parentProjectId]._level + 1;
+                _project._key = result._index[_project.parentProjectId]._key + '::' + _project.name.toLowerCase();
+
+                result.push(_project);
+                result._index[_project.id] = _project;
+            }
+
+            return result;
         },
 
         _getFilteredProjects: function (projects, filter, template) {
@@ -94,11 +118,12 @@
                 return result;
             }
 
-            // Remove Root project
-            projects.shift();
+            // TODO: Shift Root project id???
+            //  projects.shift();
+
             filter = filter.toLowerCase();
             projects.forEach(function (_project) {
-                if (_project.__key.indexOf(filter) !== -1) {
+                if (_project._key.indexOf(filter) !== -1) {
                     result.push(template(_project));
                 }
             });
@@ -112,8 +137,7 @@
          */
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
-            this._projectNodes = this._getFilteredProjects(this._projects, this._ioGetFilter(), this._groupTemplate);
-            this._ioShowProjectNodes(this._projectNodes);
+            this._ioApplyCurrentFilter();
         },
 
         /**
