@@ -1,6 +1,6 @@
 "use strict";
 
-(function (Polymer) {
+(function (Polymer, Ajax, _) {
     var Errors = {
         COMMUNICATION_ERROR: _.template('Server "<%= url %>" returned status <%= status %>'),
         CAN_NOT_PARSE_RESPONSE: 'Error while parse response'
@@ -11,6 +11,8 @@
     };
 
     Polymer.jb = Polymer.jb || {};
+
+    /** @polymerBehavior */
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
          * @param url {String}
@@ -117,4 +119,4 @@
             this._ioShowError(error.message);
         }
     };
-})(window.Polymer || {});
+})(window.Polymer || {}, window.Ajax, window._);
