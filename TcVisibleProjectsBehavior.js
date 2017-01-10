@@ -19,6 +19,7 @@
     /** @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior */
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
+         * Load projects JSON by url
          * @param url {String}
          */
         loadProjects: function (url) {
