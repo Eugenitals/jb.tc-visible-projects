@@ -211,6 +211,14 @@ Name | Type | Description | Default
                     projectsDisplayLimit: {
                         type: Number,
                         value: 100
+                    },
+
+                    /**
+                     * Maximal count of visible projects. Using for lazy render
+                     */
+                    maxRows: {
+                        type: Number,
+                        value: 20
                     }
                 },
 
@@ -274,8 +282,7 @@ Name | Type | Description | Default
                     }
 
                     this._ioLastFilterValue = filter;
-                    this._projectNodes =
-                        this._getFilteredProjects(this._projects, this._ioLastFilterValue, this._groupTemplate);
+                    this._projectNodes = this._filterProjectsNodes(filter);
                     this._ioShowProjectNodes(this._projectNodes);
                 }, 300),
 
