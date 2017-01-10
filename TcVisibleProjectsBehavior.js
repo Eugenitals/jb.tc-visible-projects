@@ -10,12 +10,6 @@
         CAN_NOT_PARSE_RESPONSE: 'Error while parse response'
     };
 
-    var Classes = {
-        PROJECT: 'project-item',
-        PROJECT_LEVEL: 'project-item__level',
-        HIGHLIGHT: 'highlight'
-    };
-
     Polymer.jb = Polymer.jb || {};
 
     /** @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior */
@@ -54,34 +48,14 @@
             });
         },
 
-        /** @type {Object} */
-        _Classes: Classes,
-
-        /** @type {Function} */
-        _groupTemplate: null,
-
         /** @type {Array<Object>} */
         _projects: null,
-
-        /** @type {Array<String>} */
-        _projectNodes: null,
 
         /** @type {String} */
         _rootProjectId: null,
 
-        _init: function (projectTemplate) {
-            projectTemplate = projectTemplate || '${name}';
-            this._groupTemplate = _.template([
-                '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL + '${_level}">',
-                    projectTemplate,
-                '</div>'
-            ].join(''));
-            this._projectNodes = [];
-        },
-
         /**
          * @param rawProjects {Array<{ id:String, parentProjectId:String, name:String }>}
-         * @private
          */
         _parseProjects: function (rawProjects) {
             var result = [];
@@ -90,7 +64,7 @@
             // Handle Root project
             var _project = rawProjects[0];
             _project._level = 0;
-            _project._key = '';
+            _project._fullName = '';
 
             result.push(_project);
             result._index[_project.id] = _project;
@@ -101,7 +75,7 @@
             for (var i = 1/* Omit root project */, len = rawProjects.length; i < len; i++ ) {
                 _project = rawProjects[i];
                 _project._level = result._index[_project.parentProjectId]._level + 1;
-                _project._key = result._index[_project.parentProjectId]._key + '::' + _project.name.toLowerCase();
+                _project._fullName = result._index[_project.parentProjectId]._fullName + '::' + _project.name.toLowerCase();
 
                 result.push(_project);
                 result._index[_project.id] = _project;
@@ -113,7 +87,6 @@
         /**
          * @param filter {String}
          * @return {Array<Strings>} valid HTML strings elements
-         * @private
          */
         _filterProjectsNodes: function (filter) {
             if (! this._projects.length) {
@@ -121,7 +94,6 @@
             }
 
             var projects = this._projects.slice(1); // Omit root project
-            var template = this._groupTemplate;
             var nodes = [];
             var _project;
             filter = filter.toLowerCase();
@@ -129,22 +101,8 @@
             for (var i = 0, len = projects.length; i < len; i++) {
                 _project = projects[i];
 
-                if (_project._key.indexOf(filter) !== -1) {
-                    nodes.push(
-                        template(
-                            /**
-                             * Creates new object because we don`t know which properties from original project object
-                             * will be used in project item custom template, so we need them all.
-                             * Also highlight the name parts
-                             */
-                            _.create(_project, {
-                                name: _project.name.replace(
-                                    new RegExp('(' + _.escapeRegExp(filter) + ')', 'i'),
-                                    '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
-                                )
-                            })
-                        )
-                    );
+                if (_project._fullName.indexOf(filter) !== -1) {
+                    nodes.push(this._ioGetProjectHTML(_project, filter));
                 }
             }
 
@@ -153,7 +111,6 @@
 
         /**
          * @param result {{count: Number, href: String, project: Array}}
-         * @private
          */
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
@@ -162,7 +119,6 @@
 
         /**
          * @param error {Error}
-         * @private
          */
         _onProjectsLoadError: function (error) {
             this._ioShowError(error.message);

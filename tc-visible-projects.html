@@ -131,15 +131,15 @@ Name | Type | Description | Default
             }
 
             /* Hope 9 levels will be enough */
-            .project-item__level1 { padding-left: 0px; }
-            .project-item__level2 { padding-left: 20px; }
-            .project-item__level3 { padding-left: 40px; }
-            .project-item__level4 { padding-left: 60px; }
-            .project-item__level5 { padding-left: 80px; }
-            .project-item__level6 { padding-left: 100px; }
-            .project-item__level7 { padding-left: 120px; }
-            .project-item__level8 { padding-left: 140px; }
-            .project-item__level9 { padding-left: 160px; }
+            .project-level-1 { padding-left: 0px; }
+            .project-level-2 { padding-left: 20px; }
+            .project-level-3 { padding-left: 40px; }
+            .project-level-4 { padding-left: 60px; }
+            .project-level-5 { padding-left: 80px; }
+            .project-level-6 { padding-left: 100px; }
+            .project-level-7 { padding-left: 120px; }
+            .project-level-8 { padding-left: 140px; }
+            .project-level-9 { padding-left: 160px; }
         </style>
 
         <table id="body">
@@ -169,13 +169,13 @@ Name | Type | Description | Default
 
                         <div class="projects-container__selector">
 
-                            <template is="dom-if" if="[[_ioIsLoading]]">
+                            <template is="dom-if" if="[[_isLoading]]">
                                 <div class="text-secondary">Loading projects...</div>
                             </template>
 
-                            <template is="dom-if" if="[[_ioIsShowAllProjectsVisible]]">
+                            <template is="dom-if" if="[[_isShowAllProjectsVisible]]">
                                 <div class="text-secondary">
-                                    <strong>[[_ioProjectsNodes.length]]</strong> projects found.
+                                    <strong>[[_projectsNodes.length]]</strong> projects found.
                                     <a class="href-action" href="#" on-tap="_onShowAllTap">
                                         Click or "<strong>↓</strong>" to show all
                                     </a>
@@ -199,6 +199,12 @@ Name | Type | Description | Default
                 DOWN: 40,
                 ENTER: 13,
                 ESC: 27
+            };
+
+            var Classes = {
+                PROJECT: 'project-item',
+                PROJECT_LEVEL_PREFIX: 'project-level-',
+                HIGHLIGHT: 'highlight'
             };
 
             Polymer({
@@ -229,22 +235,23 @@ Name | Type | Description | Default
                 },
 
                 /** @type {String} */
-                _ioLastFilterValue: null,
+                _lastFilterValue: null,
 
                 /** @type {Boolean} */
-                _ioIsShowAllProjectsVisible: false,
+                _isShowAllProjectsVisible: false,
 
                 /** @type {Boolean} */
-                _ioIsLoading: false,
+                _isLoading: false,
 
                 /** @type {Array<String>} */
-                _ioProjectsNodes: null,
+                _projectsNodes: null,
+
+                /** @type {Function} */
+                _projectTemplateFn: null,
 
                 ready: function () {
-                    var projectTemplate = this.queryEffectiveChildren('template[name="group-template"]');
-                    projectTemplate = projectTemplate ? projectTemplate.innerHTML.trim() : null;
-
-                    this._init(projectTemplate);
+                    this._projectsNodes = [];
+                    this._initProjectTemplate();
                     this.loadProjects(this.url);
                 },
 
@@ -256,52 +263,94 @@ Name | Type | Description | Default
                 },
 
                 _ioSetLoading: function (isOn) {
-                    this._ioIsLoading = isOn;
+                    this._isLoading = isOn;
                 },
 
                 _ioGetFilter: function () {
                     return this.$.hiddenProjectsFilter.value.trim();
                 },
 
-                _ioShowProjectNodes: function (nodes, isForced) {
-                    this._ioProjectsNodes = nodes;
-
-                    if (!!isForced || this._ioProjectsNodes.length <= this.projectsDisplayLimit) {
-                        this._ioIsShowAllProjectsVisible = false;
-                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
-                    } else {
-                        this._ioIsShowAllProjectsVisible = true;
-                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = '';
-                    }
-                },
-
                 _ioShowError: function (message) {
 //                    console.log(error.message);
+                },
+
+                /**
+                 * Render project as raw HTML
+                 * Creates new object because we don`t know which properties from original project object
+                 * will be used in project item custom template, so we need them all.
+                 * Also highlight the name parts
+                 * @param project {Object}
+                 * @return {String}
+                 */
+                _ioGetProjectHTML: function (project, filter) {
+                    return this._projectTemplateFn(
+                        _.create(project, {
+                            name: project.name.replace(
+                                new RegExp('(' + _.escapeRegExp(filter) + ')', 'i'),
+                                '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
+                            )
+                        })
+                    );
                 },
 
                 _ioApplyCurrentFilter: _.debounce(function () {
                     var filter = this._ioGetFilter();
 
                     // Coz we use "keyup" event we should ensure that our filter is changed
-                    if (filter === this._ioLastFilterValue) {
+                    if (filter === this._lastFilterValue) {
                         return;
                     }
 
-                    this._ioLastFilterValue = filter;
-                    this._projectNodes = this._filterProjectsNodes(filter);
-                    this._ioShowProjectNodes(this._projectNodes);
+                    this._lastFilterValue = filter;
+                    this._projectsNodes = this._filterProjectsNodes(filter);
+                    this._showProjectNodes(this._projectsNodes);
                 }, 300),
 
-                _ioSelectNextProject: function () {
-                    if (this._ioIsShowAllProjectsVisible) {
-                        this._ioShowProjectNodes(this._ioProjectsNodes, true);
+                /**
+                 * Extract and prepare template from Light DOM
+                 * <template name="group-template"> ... </template>
+                 */
+                _initProjectTemplate: function () {
+                    var projectTemplate = this.queryEffectiveChildren('template[name="group-template"]');
+
+                    if (projectTemplate) {
+                        projectTemplate = projectTemplate.innerHTML.trim();
+                    } else {
+                        projectTemplate = '${name}';
                     }
 
-                    //todo: impl
+                    this._projectTemplateFn = _.template([
+                        '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
+                        projectTemplate,
+                        '</div>'
+                    ].join(''));
                 },
 
-                _ioSelectPrevProject: function () {
-                    //todo: impl
+                _showProjectNodes: function (nodes, isForced) {
+                    this._projectsNodes = nodes;
+
+                    if (!!isForced || this._projectsNodes.length <= this.projectsDisplayLimit) {
+                        this._isShowAllProjectsVisible = false;
+                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
+                    } else {
+                        this._isShowAllProjectsVisible = true;
+                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = '';
+                    }
+                },
+
+                /**
+                 * todo: impl
+                 */
+                _selectNextProject: function () {
+                    if (this._isShowAllProjectsVisible) {
+                        this._showProjectNodes(this._projectsNodes, true);
+                    }
+                },
+
+                /**
+                 * todo: impl
+                 */
+                _selectPrevProject: function () {
                 },
 
                 _onFilterKeyup: function (e) {
@@ -309,10 +358,10 @@ Name | Type | Description | Default
 
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
-                            this._ioSelectNextProject();
+                            this._selectNextProject();
                             break;
                         case Keycodes.UP:
-                            this._ioSelectPrevProject();
+                            this._selectPrevProject();
                             break;
                         case Keycodes.ENTER:
                             break;
@@ -323,7 +372,7 @@ Name | Type | Description | Default
 
                 _onShowAllTap: function (e) {
                     e.stopPropagation();
-                    this._ioShowProjectNodes(this._ioProjectsNodes, true);
+                    this._showProjectNodes(this._projectsNodes, true);
                 }
             });
         })()
