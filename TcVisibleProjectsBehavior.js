@@ -139,7 +139,7 @@
                              */
                             _.create(_project, {
                                 name: _project.name.replace(
-                                    new RegExp('(' + filter + ')', 'i'),
+                                    new RegExp('(' + _.escapeRegExp(filter) + ')', 'i'),
                                     '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
                                 )
                             })
