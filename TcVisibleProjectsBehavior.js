@@ -99,7 +99,7 @@
             // Save root project ID
             this._rootProjectId = _project.id;
 
-            for (var i = 1, len = rawProjects.length; i < len; i++ ) {
+            for (var i = 1/* Omit root project */, len = rawProjects.length; i < len; i++ ) {
                 _project = rawProjects[i];
                 _project._level = result._index[_project.parentProjectId]._level + 1;
                 _project._key = result._index[_project.parentProjectId]._key + '::' + _project.name.toLowerCase();
@@ -111,24 +111,31 @@
             return result;
         },
 
-        _getFilteredProjects: function (projects, filter, template) {
-            var result = [];
-
-            if (! projects.length) {
-                return result;
+        /**
+         * @param filter {String}
+         * @return {Array<Strings>} valid HTML strings elements
+         * @private
+         */
+        _filterProjectsNodes: function (filter) {
+            if (! this._projects.length) {
+                return [];
             }
 
-            // TODO: Shift Root project id???
-            //  projects.shift();
-
+            var projects = this._projects.slice(1); // Omit root project
+            var template = this._groupTemplate;
+            var nodes = [];
+            var _project;
             filter = filter.toLowerCase();
-            projects.forEach(function (_project) {
-                if (_project._key.indexOf(filter) !== -1) {
-                    result.push(template(_project));
-                }
-            });
 
-            return result;
+            for (var i = 0, len = projects.length; i < len; i++) {
+                _project = projects[i];
+
+                if (_project._key.indexOf(filter) !== -1) {
+                    nodes.push(template(_project));
+                }
+            }
+
+            return nodes;
         },
 
         /**
