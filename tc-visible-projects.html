@@ -225,6 +225,14 @@ Name | Type | Description | Default
                     },
 
                     /**
+                     * Filtration input delay
+                     */
+                    delay: {
+                        type: Number,
+                        value: 50
+                    },
+
+                    /**
                      * Maximal count of visible projects. Using for lazy render
                      */
                     maxRows: {
@@ -293,21 +301,23 @@ Name | Type | Description | Default
                  * will be used in project item custom template, so we need them all.
                  * Also highlight the name parts
                  * @param project {Object}
+                 * @param [highlight] {String} string to highlight
                  * @return {String}
                  */
-                _ioGetProjectHTML: function (project, filter) {
-                    return this._projectTemplateFn(
-                        _.create(project, {
-                            name: project.name.replace(
-                                new RegExp('(' + _.escapeRegExp(filter) + ')', 'i'),
-                                '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
-                            )
-                        })
-                    );
+                _ioGetProjectHTML: function (project, highlight) {
+                    var name = project.name;
+
+                    if (highlight) {
+                        name = name.replace(
+                            new RegExp('(' + _.escapeRegExp(highlight) + ')', 'i'),
+                            '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
+                        );
+                    }
+
+                    return this._projectTemplateFn(_.create(project, { name: name }));
                 },
 
                 _ioApplyCurrentFilter: _.debounce(function () {
-                    var ts = (new Date()).getTime();
                     var filter = this._ioGetFilter();
 
                     // Coz we use "keyup" event we should ensure that our filter is changed
@@ -315,8 +325,11 @@ Name | Type | Description | Default
                         return;
                     }
 
+                    var isProgressive = filter.indexOf(this._lastFilterValue) === 0;
                     this._lastFilterValue = filter;
-                    this._projectsNodes = this._filterProjectsNodes(filter);
+
+                    var ts = (new Date()).getTime();
+                    this._projectsNodes = this._filterProjectsNodes(filter, isProgressive);
                     this._showProjectNodes(this._projectsNodes);
                     console.log((new Date()).getTime() - ts);
                 }, 300),
