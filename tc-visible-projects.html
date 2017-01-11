@@ -155,6 +155,7 @@ Name | Type | Description | Default
             #ieFilterPlaceholder {
                 color: gray;
                 pointer-events: none;
+                cursor: default;
 
                 position: absolute;
                 top: 0;
@@ -192,7 +193,9 @@ Name | Type | Description | Default
 
                             <!-- Very special placeholder for IE9 -->
                             <!--[if IE]>
-                            <span id="ieFilterPlaceholder" on-click="_ieOnPlaceholderTap">
+                            <span id="ieFilterPlaceholder"
+                                  on-click="_ieOnPlaceholderTap"
+                                  on-selectstart="_ieOnPlaceholderSelectionStart">
                                 Find projects by name...
                             </span>
                             <![endif]-->
@@ -484,6 +487,14 @@ Name | Type | Description | Default
                 _ieOnPlaceholderTap: function (e) {
                     e.stopPropagation();
                     this.$.hiddenProjectsFilter.focus();
+                },
+
+                /**
+                 * Prevent placeholder text selection
+                 */
+                _ieOnPlaceholderSelectionStart: function (e) {
+                    e.preventDefault();
+                    return false;
                 },
 
                 _onShowAllTap: function (e) {
