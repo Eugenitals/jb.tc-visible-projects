@@ -88,18 +88,6 @@
         },
 
         /**
-         * 1. Split filter string by ' ' symbol into parts
-         * 2. Escape each part
-         * 3. Join parts to get string like this -> '(part1).+(part2).+(partN)'
-         * 4. Make case insensitive RegExp
-         * @param filter {String}
-         * @return {RegExp}
-         */
-        _getRegExpByFilter: function (filter) {
-            return new RegExp('(' + filter.split(' ').map(_.escapeRegExp).join(').+(') + ')', 'i');
-        },
-
-        /**
          * @param filter {String}
          * @param [isProgressive] {Boolean} true to filter over current _filteredProjectsMap
          * @return {Array<Strings>} valid HTML strings elements
@@ -132,7 +120,8 @@
                 filteredProjects = [[this._rootProject.id, this._rootProject]];
                 filteredProjects[this._rootProject.id] = true;
 
-                var regexp = this._getRegExpByFilter(filter);
+                var filterParts = filter.split(' ');
+                var regexp = new RegExp('(' + filterParts.map(_.escapeRegExp).join(').+(') + ')', 'i');
 
                 for (var j = 1 /* Omit root project */, len = projectsArr.length; j < len; j++) {
                     _project = projectsArr[j];
@@ -141,14 +130,14 @@
                         _projectIndex = nodes.length;
 
                         // Display current project
-                        nodes.push(this._ioGetProjectHTML(_project, filter));
+                        nodes.push(this._ioGetProjectHTML(_project, filterParts));
                         filteredProjects.push([_project.id, _project]);
                         filteredProjects[_project.id] = true;
 
                         // Display all parents
                         _parent = projectsMap.get(_project.parentProjectId);
                         while (! filteredProjects[_parent.id]) {
-                            nodes.splice(_projectIndex, 0, this._ioGetProjectHTML(_parent, filter));
+                            nodes.splice(_projectIndex, 0, this._ioGetProjectHTML(_parent, filterParts));
                             filteredProjects.splice(_projectIndex, 0, [_parent.id, _parent]);
                             filteredProjects[_parent.id] = true;
                             _parent = projectsMap.get(_parent.parentProjectId);
@@ -158,7 +147,7 @@
                         // Display all children
                         _child = projectsArr[j + 1];
                         while (_child && _child._level > _project._level) {
-                            nodes.push(this._ioGetProjectHTML(_child, filter));
+                            nodes.push(this._ioGetProjectHTML(_child, filterParts));
                             filteredProjects.push([_child.id, _child]);
                             filteredProjects[_child.id] = true;
                             j++;

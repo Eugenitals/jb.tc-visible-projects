@@ -352,25 +352,40 @@ Name | Type | Description | Default
                 },
 
                 /**
-                 * Render project as raw HTML
-                 * Creates new object because we don`t know which properties from original project object
-                 * will be used in project item custom template, so we need them all.
-                 * Also highlight the name parts
+                 * Render project as raw HTML and highlight the name parts from left to right
                  * @param project {Object}
-                 * @param [highlight] {String} string to highlight
+                 * @param [highlight] {Array<String>} strings to highlight
                  * @return {String}
                  */
                 _ioGetProjectHTML: function (project, highlight) {
-                    var name = project.name;
+                    var nameParts = [];
 
                     if (highlight) {
-                        name = name.replace(
-                            new RegExp('(' + _.escapeRegExp(highlight) + ')', 'i'),
-                            '<span class="' + Classes.HIGHLIGHT + '">$1</span>'
-                        );
+                        var _nameTail = project.name;
+                        var _highlight, _exec, _matched;
+
+                        for (var i = 0, len = highlight.length; i < len; i++) {
+                            _highlight = highlight[i];
+                            _exec = new RegExp('(' + _.escapeRegExp(_highlight) + ')', 'i').exec(_nameTail);
+
+                            if (_exec) {
+                                _matched = _exec[1/* take only first match */];
+                                nameParts.push(_nameTail.substr(0, _exec.index)
+                                    + '<span class="' + Classes.HIGHLIGHT + '">' + _matched + '</span>');
+                                _nameTail = _nameTail.substr(_exec.index + _matched.length);
+                            }
+                        }
+
+                        nameParts.push(_nameTail);
+                    } else {
+                        nameParts.push(project.name)
                     }
 
-                    return this._projectTemplateFn(_.create(project, { name: name }));
+                    /**
+                     * Creates new object because we don`t know which properties from original project object
+                     * will be used in project item custom template, so we need them all.
+                     */
+                    return this._projectTemplateFn(_.create(project, { name: nameParts.join('') }));
                 },
 
                 _ioApplyCurrentFilter: ioApplyCurrentFilter,
