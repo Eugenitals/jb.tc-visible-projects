@@ -81,6 +81,15 @@ Name | Type | Description | Default
                 opacity: .3;
             }
 
+            #loader {
+                text-align: center;
+                padding-top: 12px;
+                font-size: .9em;
+            }
+            #loader img {
+                vertical-align: middle;
+            }
+
             .text-secondary {
                 color: var(--tc-text-color, rgba(0,0,0,.54));
             }
@@ -169,7 +178,9 @@ Name | Type | Description | Default
                         <div class="projects-container__selector">
 
                             <template is="dom-if" if="[[_isLoading]]">
-                                <div class="text-secondary">Loading projects...</div>
+                                <div id="loader" class="text-secondary">
+                                    <img src="img/ajax-loader.gif"> Loading projects...
+                                </div>
                             </template>
 
                             <template is="dom-if" if="[[_isShowAllProjectsVisible]]">
