@@ -206,6 +206,23 @@ Name | Type | Description | Default
                 HIGHLIGHT: 'highlight'
             };
 
+            var ioApplyCurrentFilter = function () {
+                var filter = this._ioGetFilter();
+
+                // Coz we use "keyup" event we should ensure that our filter is changed
+                if (filter === this._lastFilterValue) {
+                    return;
+                }
+
+                var isProgressive = filter.indexOf(this._lastFilterValue) === 0;
+                this._lastFilterValue = filter;
+
+                var ts = (new Date()).getTime();
+                this._projectsNodes = this._filterProjectsNodes(filter, isProgressive);
+                this._showProjectNodes(this._projectsNodes);
+                console.log((new Date()).getTime() - ts);
+            };
+
             Polymer({
                 is: 'tc-visible-projects',
                 behaviors: [ Polymer.jb.TcVisibleProjectsBehavior ],
@@ -225,11 +242,12 @@ Name | Type | Description | Default
                     },
 
                     /**
-                     * Filtration input delay
+                     * Filtration input debounce delay
                      */
                     delay: {
                         type: Number,
-                        value: 50
+                        value: 100,
+                        observer: '_delayChanged'
                     },
 
                     /**
@@ -317,22 +335,19 @@ Name | Type | Description | Default
                     return this._projectTemplateFn(_.create(project, { name: name }));
                 },
 
-                _ioApplyCurrentFilter: _.debounce(function () {
-                    var filter = this._ioGetFilter();
+                _ioApplyCurrentFilter: ioApplyCurrentFilter,
 
-                    // Coz we use "keyup" event we should ensure that our filter is changed
-                    if (filter === this._lastFilterValue) {
-                        return;
+                /**
+                 * Debounce filter application
+                 * @param delay {Number}
+                 */
+                _delayChanged: function (delay) {
+                    if (delay < 1) {
+                        this._ioApplyCurrentFilter = ioApplyCurrentFilter;
+                    } else {
+                        this._ioApplyCurrentFilter = _.debounce(ioApplyCurrentFilter, delay);
                     }
-
-                    var isProgressive = filter.indexOf(this._lastFilterValue) === 0;
-                    this._lastFilterValue = filter;
-
-                    var ts = (new Date()).getTime();
-                    this._projectsNodes = this._filterProjectsNodes(filter, isProgressive);
-                    this._showProjectNodes(this._projectsNodes);
-                    console.log((new Date()).getTime() - ts);
-                }, 300),
+                },
 
                 /**
                  * Extract and prepare template from Light DOM
