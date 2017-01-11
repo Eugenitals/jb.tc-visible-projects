@@ -13,6 +13,7 @@
   ],
   "dependencies": {
     "lodash": "lodash#^3",
+    "es6-shim": "es6-shim#^0.35",
     "paper-dialog": "PolymerElements/paper-dialog#^1.0.0",
     "polymer": "Polymer/polymer#^1.4.0"
   },
