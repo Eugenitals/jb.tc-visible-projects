@@ -150,6 +150,23 @@ Name | Type | Description | Default
             .project-level-9 { padding-left: 160px; }
         </style>
 
+        <!--[if IE]>
+        <style>
+            #ieFilterPlaceholder {
+                color: gray;
+                pointer-events: none;
+
+                position: absolute;
+                top: 0;
+                left: 5px;
+            }
+            #ieFilterPlaceholder.hidden {
+                display: none;
+            }
+
+        </style>
+        <![endif]-->
+
         <table id="body">
             <tbody>
                 <tr>
@@ -166,10 +183,19 @@ Name | Type | Description | Default
 
                     <td class="projects-container">
                         <div class="projects-container__title">
+
                             <!-- "keyup" event used here instead of "input" due to IE9 compatibility -->
-                            <input id="hiddenProjectsFilter" type="text"
-                                   placeholder="Find projects by name..."
+                            <input id="hiddenProjectsFilter"
+                                   type="text" placeholder="Find projects by name..."
+                                   on-focus="_onFilterFocus"
                                    on-keyup="_onFilterKeyup">
+
+                            <!-- Very special placeholder for IE9 -->
+                            <!--[if IE]>
+                            <span id="ieFilterPlaceholder" on-click="_ieOnPlaceholderTap">
+                                Find projects by name...
+                            </span>
+                            <![endif]-->
 
                             <!-- Just meaningful icon -->
                             <iron-icon id="searchIcon" icon="icons:search"></iron-icon>
@@ -214,10 +240,11 @@ Name | Type | Description | Default
             var Classes = {
                 PROJECT: 'project-item',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
-                HIGHLIGHT: 'highlight'
+                HIGHLIGHT: 'highlight',
+                HIDDEN: 'hidden'
             };
 
-            var ioApplyCurrentFilter = function () {
+            function ioApplyCurrentFilter () {
                 var filter = this._ioGetFilter();
 
                 // Coz we use "keyup" event we should ensure that our filter is changed
@@ -422,6 +449,26 @@ Name | Type | Description | Default
                         default:
                             this._ioApplyCurrentFilter();
                     }
+
+                    if (this.$.ieFilterPlaceholder) {
+                        if (!!e.target.value) {
+                            this.$.ieFilterPlaceholder.classList.add(Classes.HIDDEN);
+                        } else {
+                            this.$.ieFilterPlaceholder.classList.remove(Classes.HIDDEN);
+                        }
+                    }
+                },
+
+                _onFilterFocus: function (e) {
+                    e.target.select();
+                },
+
+                /**
+                 * Refocus input below
+                 */
+                _ieOnPlaceholderTap: function (e) {
+                    e.stopPropagation();
+                    this.$.hiddenProjectsFilter.focus();
                 },
 
                 _onShowAllTap: function (e) {
