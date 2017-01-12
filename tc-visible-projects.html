@@ -136,7 +136,6 @@ Name | Type | Description | Default
             .project-item {
                 cursor: default;
                 list-style-type: none;
-                @apply(--tc-project-selector-item);
             }
             .project-item:nth-of-type(2n) {
                 @apply(--tc-project-selector-item-nth-even);
@@ -157,8 +156,14 @@ Name | Type | Description | Default
                 padding: 3px 10px 3px 10px;
 
                 background-color: var(--tc-primary-color);
+            }
 
-                @apply(--tc-project-selector-item-focused);
+            .project-item__template {
+                @apply(--tc-project-selector-item-template);
+            }
+
+            .project-item:hover .project-item__template {
+                @apply(--tc-project-selector-item-template-focused);
             }
 
             /*.project-item:hover:after {*/
@@ -280,8 +285,7 @@ Name | Type | Description | Default
 
             var Classes = {
                 PROJECT: 'project-item',
-                PROJECT_VISIBLE: 'project-item_visible',
-                PROJECT_HIDDEN: 'project-item_hidden',
+                PROJECT_TEMPLATE: 'project-item__template',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
                 FOCUSED: 'focused',
@@ -346,11 +350,11 @@ Name | Type | Description | Default
                     },
 
                     /**
-                     * Maximal count of visible projects. Using for lazy render
+                     * Disable filtration highlighting useful for slow browsers (Hello IE)
                      */
-                    maxRows: {
-                        type: Number,
-                        value: 20
+                    noHighlight: {
+                        type: Boolean,
+                        value: false
                     }
                 },
 
@@ -379,7 +383,7 @@ Name | Type | Description | Default
                     // Wait ~10 ms until local DOM initialized
                     this.async(function () {
                         this.$.hiddenProjectsFilter.focus();
-                    }, null, 10);
+                    }, 10);
                 },
 
                 _ioSetLoading: function (isOn) {
@@ -407,43 +411,6 @@ Name | Type | Description | Default
                 _ioShowError: function (message, code) {
                     this.fire('error', { message: message, code: code });
                 },
-
-                /**
-                 * Render project as raw HTML and highlight the name parts from left to right
-                 * @param project {Object}
-                 * @param [highlight] {Array<String>} strings to highlight
-                 * @return {String}
-                 */
-                /*_ioGetProjectHTML: function (project, highlight) {
-                    var nameParts = [];
-
-                    if (highlight) {
-                        var _nameTail = project.name;
-                        var _highlight, _exec, _matched;
-
-                        for (var i = 0, len = highlight.length; i < len; i++) {
-                            _highlight = highlight[i];
-                            _exec = new RegExp('(' + _.escapeRegExp(_highlight) + ')', 'i').exec(_nameTail);
-
-                            if (_exec) {
-                                _matched = _exec[1/!* take only first match *!/];
-                                nameParts.push(_nameTail.substr(0, _exec.index)
-                                    + '<span class="' + Classes.HIGHLIGHT + '">' + _matched + '</span>');
-                                _nameTail = _nameTail.substr(_exec.index + _matched.length);
-                            }
-                        }
-
-                        nameParts.push(_nameTail);
-                    } else {
-                        nameParts.push(project.name)
-                    }
-
-                    /!**
-                     * Creates new object because we don`t know which properties from original project object
-                     * will be used in project item custom template, so we need them all.
-                     *!/
-                    return this._projectTemplateFn(_.create(project, { name: nameParts.join('') }));
-                },*/
 
                 _ioGetProjectHTML: function (project) {
                     /**
@@ -482,11 +449,11 @@ Name | Type | Description | Default
                     if (projectTemplate) {
                         projectTemplate = projectTemplate.innerHTML.trim();
                     } else {
-                        projectTemplate = '${name}';
+                        projectTemplate = '<div class="project-item__template" is-name>${name}</div>';
                     }
 
                     this._projectTemplateFn = _.template([
-                        '<li class="' + Classes.PROJECT + '" data-id="${id}">',
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}">',
                             '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
                             '</div>',
@@ -500,6 +467,7 @@ Name | Type | Description | Default
 
                 _filterProjectsNodes: function (filter, isProgressive) {
                     var filtered = this._getFilteredProject(filter, isProgressive);
+                    var highlight = [];
                     var filterParts = filter.split(' ');
                     var _node, _id;
 
@@ -507,8 +475,56 @@ Name | Type | Description | Default
                         _node = this._projectsNodes[i];
                         _id = _node.getAttribute('data-id');
 
-                        _node.style.display = filtered[_id] ? '' : 'none';
+                        if (filtered[_id]) {
+                            _node.style.display = '';
+                            highlight.push([_node, filterParts]);
+                        } else {
+                            _node.style.display = 'none';
+                        }
                     }
+
+                    // Async highlighting
+                    if (! this.noHighlight) {
+                        this.async(function () {
+                            highlight.forEach(function (_highlight) {
+                                this._highlightProject.apply(this, _highlight);
+                            }, this);
+                        }, 10);
+                    }
+                },
+
+                /**
+                 * Highlight name parts from left to right
+                 * @param project {Object}
+                 * @param [highlight] {Array<String>} strings to highlight
+                 * @return {String}
+                 */
+                _highlightProject: function (node, highlight) {
+                    var name = node.getAttribute('data-name');
+                    var nameParts = [];
+
+                    if (highlight) {
+                        var _nameTail = name;
+                        var _highlight, _exec, _matched;
+
+                        for (var i = 0, len = highlight.length; i < len; i++) {
+                            _highlight = highlight[i];
+                            _exec = new RegExp('(' + _.escapeRegExp(_highlight) + ')', 'i').exec(_nameTail);
+
+                            if (_exec) {
+                                _matched = _exec[1/* take only first match */];
+                                nameParts.push(_nameTail.substr(0, _exec.index)
+                                    + '<span class="' + Classes.HIGHLIGHT + '">' + _matched + '</span>');
+                                _nameTail = _nameTail.substr(_exec.index + _matched.length);
+                            }
+                        }
+
+                        nameParts.push(_nameTail);
+                    } else {
+                        nameParts.push(name)
+                    }
+
+                    Polymer.dom(Polymer.dom(node).querySelector('[is-name]')).innerHTML = nameParts.join('');
                 },
 
                 /**
