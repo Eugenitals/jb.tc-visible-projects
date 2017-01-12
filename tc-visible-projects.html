@@ -213,7 +213,9 @@ Name | Type | Description | Default
                             <strong>My visible projects</strong>
                         </div>
                         <div class="projects-container__body">
-                            <ul id="visibleProjectsSelector" class="projects-container__selector">
+                            <ul id="visibleProjectsSelector"
+                                class="projects-container__selector"
+                                on-tap="_onVisibleProjectTapDelegator">
                                 <!-- ...visible projects will be here... -->
                             </ul>
                         </div>
@@ -259,7 +261,7 @@ Name | Type | Description | Default
                             </template>
 
                             <ul id="hiddenProjectsSelector" class="projects-container__selector"
-                                on-tap="_onHiddenProjectTap">
+                                on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
                             </ul>
                         </div>
@@ -280,11 +282,27 @@ Name | Type | Description | Default
 
             var Classes = {
                 PROJECT: 'project-item',
+                PROJECT_VISIBLE: 'project-item_visible',
+                PROJECT_HIDDEN: 'project-item_hidden',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
                 FOCUSED: 'focused',
                 HIDDEN: 'hidden'
             };
+            
+            function getDelegateTarget(source, delegator, cls) {
+                var target = null;
+
+                while (source !== delegator && !source.classList.contains(cls)) {
+                    source = Polymer.dom(source).parentNode;
+                }
+
+                if (source.classList.contains(Classes.PROJECT)) {
+                    target =  source;
+                }
+
+                return target;
+            }
 
             function ioApplyCurrentFilter () {
                 var filter = this._ioGetFilter();
@@ -522,17 +540,21 @@ Name | Type | Description | Default
                     e.target.select();
                 },
 
-                _onHiddenProjectTap: function (e) {
+                _onHiddenProjectTapDelegator: function (e) {
                     e.stopPropagation();
-                    var target = e.target;
-                    var sourceEvent = e.detail.sourceEvent;
+                    var target = getDelegateTarget(e.target, this.$.hiddenProjectsSelector, Classes.PROJECT);
 
-                    while (target !== this.$.hiddenProjectsSelector && !target.classList.contains(Classes.PROJECT)) {
-                        target = Polymer.dom(target).parentNode;
-                    }
-
-                    if (target.classList.contains(Classes.PROJECT)) {
+                    if (target) {
                         Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
+                    }
+                },
+
+                _onVisibleProjectTapDelegator: function (e) {
+                    e.stopPropagation();
+                    var target = getDelegateTarget(e.target, this.$.visibleProjectsSelector, Classes.PROJECT);
+
+                    if (target) {
+                        Polymer.dom(this.$.hiddenProjectsSelector).appendChild(target);
                     }
                 },
 
