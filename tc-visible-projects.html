@@ -17,7 +17,7 @@ Name | Type | Description | Default
 `--tc-primary-color` | Prop |  Application primary color | #0CB0F2
 `--tc-secondary-color` | Prop |  Application secondary color | #39E865
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
-`--tc-project-selector-height` | Prop | Height of project tree (final height will be +32px) | 368px
+`--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
 `--tc-project-selector-item` | Mixin |  Applied to a project item | {}
 `--tc-project-selector-item-hover` | Mixin |  Applied to a project item :hover | {}
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item :nth-of-type(2n)  | {}
@@ -32,7 +32,7 @@ Name | Type | Description | Default
                 --tc-text-color: rgba(0,0,0,.87);
                 --tc-primary-color: rgba(0,0,0,.87);
                 --tc-secondary-color: rgba(0,0,0,.87);
-                --tc-project-selector-height: 368px;
+                --tc-project-selector-height: 370px;
                 --tc-project-selector-highlight-color: #ffff80;
 
                 display: block;
@@ -107,7 +107,6 @@ Name | Type | Description | Default
             .projects-container {
                 width: 50%;
                 border-left: 1px solid rgba(0,0,0,.12);
-                padding: 0 16px;
                 vertical-align: top;
             }
 
@@ -119,24 +118,62 @@ Name | Type | Description | Default
             .projects-container__title {
                 position: relative;
                 font-size: 1.1em;
-                height: 32px;
+                height: 25px;
+                padding: 0 16px;
+            }
+
+            .projects-container__body {
+                height: var(--tc-project-selector-height);
+                overflow: auto;
+                padding: 5px 16px 0;
             }
 
             .projects-container__selector {
-                height: var(--tc-project-selector-height);
-                overflow: auto;
+                margin: 0;
+                padding: 0;
             }
 
             .project-item {
                 cursor: default;
+                list-style-type: none;
                 @apply(--tc-project-selector-item);
-            }
-            .project-item:hover {
-                @apply(--tc-project-selector-item-hover);
             }
             .project-item:nth-of-type(2n) {
                 @apply(--tc-project-selector-item-nth-even);
             }
+            .project-item:hover,
+            .project-item:focus,
+            .project-item.focused {
+                position: relative;
+                cursor: pointer;
+                outline: 0;
+
+                border-collapse: separate;
+                box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+                            0px 1px 5px 0px rgba(0, 0, 0, 0.12),
+                            0px 3px 1px -2px rgba(0, 0, 0, 0.2);
+
+                margin: -3px -10px -3px -10px;
+                padding: 3px 10px 3px 10px;
+
+                background-color: var(--tc-primary-color);
+
+                @apply(--tc-project-selector-item-focused);
+            }
+
+            /*.project-item:hover:after {*/
+                /*position: absolute;*/
+                /*top: 0;*/
+                /*left: -7px;*/
+                /*content: '';*/
+
+                /*width: 0;*/
+                /*height: 0;*/
+                /*border-top: 13.5px solid transparent;*/
+                /*border-bottom: 13.5px solid transparent;*/
+
+                /*border-right: 8px solid var(--tc-primary-color);*/
+            /*}*/
 
             /* Hope 9 levels will be enough */
             .project-level-1 { padding-left: 0px; }
@@ -159,7 +196,7 @@ Name | Type | Description | Default
 
                 position: absolute;
                 top: 0;
-                left: 5px;
+                left: 20px;
             }
             #ieFilterPlaceholder.hidden {
                 display: none;
@@ -175,10 +212,10 @@ Name | Type | Description | Default
                         <div class="projects-container__title">
                             <strong>My visible projects</strong>
                         </div>
-                        <div class="projects-container__selector">
-                            <div id="visibleProjectsSelector">
+                        <div class="projects-container__body">
+                            <ul id="visibleProjectsSelector" class="projects-container__selector">
                                 <!-- ...visible projects will be here... -->
-                            </div>
+                            </ul>
                         </div>
                     </td>
 
@@ -204,7 +241,7 @@ Name | Type | Description | Default
                             <iron-icon id="searchIcon" icon="icons:search"></iron-icon>
                         </div>
 
-                        <div class="projects-container__selector">
+                        <div class="projects-container__body">
 
                             <template is="dom-if" if="[[_isLoading]]">
                                 <div id="loader" class="text-secondary">
@@ -221,9 +258,10 @@ Name | Type | Description | Default
                                 </div>
                             </template>
 
-                            <div id="hiddenProjectsSelector">
+                            <ul id="hiddenProjectsSelector" class="projects-container__selector"
+                                on-tap="_onHiddenProjectTap">
                                 <!-- ...hidden projects will be here... -->
-                            </div>
+                            </ul>
                         </div>
                     </td>
                 </tr>
@@ -244,6 +282,7 @@ Name | Type | Description | Default
                 PROJECT: 'project-item',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
+                FOCUSED: 'focused',
                 HIDDEN: 'hidden'
             };
 
@@ -419,9 +458,11 @@ Name | Type | Description | Default
                     }
 
                     this._projectTemplateFn = _.template([
-                        '<div class="' + Classes.PROJECT + ' ' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
-                        projectTemplate,
-                        '</div>'
+                        '<li class="' + Classes.PROJECT + '">',
+                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}" data-id="${id}">',
+                                projectTemplate,
+                            '</div>',
+                        '</li>'
                     ].join(''));
                 },
 
@@ -481,6 +522,25 @@ Name | Type | Description | Default
                     e.target.select();
                 },
 
+                _onHiddenProjectTap: function (e) {
+                    e.stopPropagation();
+                    var target = e.target;
+                    var sourceEvent = e.detail.sourceEvent;
+
+                    while (target !== this.$.hiddenProjectsSelector && !target.classList.contains(Classes.PROJECT)) {
+                        target = Polymer.dom(target).parentNode;
+                    }
+
+                    if (target.classList.contains(Classes.PROJECT)) {
+                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
+                    }
+                },
+
+                _onShowAllTap: function (e) {
+                    e.stopPropagation();
+                    this._showProjectNodes(this._projectsNodes, true);
+                },
+
                 /**
                  * Refocus input below
                  */
@@ -495,11 +555,6 @@ Name | Type | Description | Default
                 _ieOnPlaceholderSelectionStart: function (e) {
                     e.preventDefault();
                     return false;
-                },
-
-                _onShowAllTap: function (e) {
-                    e.stopPropagation();
-                    this._showProjectNodes(this._projectsNodes, true);
                 }
             });
         })()
