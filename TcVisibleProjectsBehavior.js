@@ -51,11 +51,11 @@
         /** @type {Array} */
         _projects: null,
 
-        /** @type {Map} */
-        _filteredProjectsMap: null,
-
         /** @type {Object} */
         _rootProject: null,
+
+        /** @type {Object} */
+        _lastFilteredMap: null,
 
         /**
          * @param rawProjects {Array<{ id:String, parentProjectId:String, name:String }>}
@@ -112,7 +112,7 @@
         /**
          * Returns a map of projects that matched with filter
          * @param filter {String}
-         * @param [isProgressive] {Boolean} true to filter over current _filteredProjectsMap
+         * @param [isProgressive] {Boolean} true to filter through last filtered projects
          * @return {Object} map of visible projects
          */
         _getFilteredProject: function (filter, isProgressive) {
@@ -123,18 +123,39 @@
             // Fastest for empty filter only
             if (! filter.length) {
                 // todo: exclude selected projects
-                return this._projects._index;
+                return this._lastFilteredMap = this._projects._index;
             }
 
-            return this._filterProject(this._rootProject, filter, {});
+            var preFiltered = {};
+            preFiltered[ this._rootProject.id ] = true;
+
+            var allowed = isProgressive
+                ? this._lastFilteredMap
+                : null
+
+            return this._lastFilteredMap = this._filterProject(this._rootProject, filter, preFiltered, {}, allowed);
         },
 
         // todo: exclude selected projects
-        _filterProject: function (project, filter, filtered) {
+        /**
+         * Recursively search projects by filter
+         * @param project {Object} current project
+         * @param filter {String} current filter
+         * @param filteredMap {Object} map of already matched projects
+         * @param excludedMap {Object} map of projects excluded from filtration
+         * @param [allowedMap] {Object} map of projects available for filtration
+         * @return {Object} extended filteredMap
+         */
+        _filterProject: function (project, filter, filteredMap, excludedMap, allowedMap) {
             var match = false;
 
+            // If excluded or no allowed
+            if (excludedMap[ project.id ] || (allowedMap && !allowedMap[ project.id ])) {
+                return filteredMap;
+            }
+
             if (! filter) {
-                filtered[ project.id ] = true;
+                filteredMap[ project.id ] = true;
             } else {
                 var filterParts = filter.split(' ');
                 var regexp = new RegExp('(' + filterParts.map(_.escapeRegExp).join(').+(') + ')', 'i');
@@ -144,25 +165,25 @@
 
                     // Display all parents
                     var _parent = this._projects._index[ project.parentProjectId ];
-                    while (_parent !== this._rootProject && !filtered[_parent.id]) {
-                        filtered[ _parent.id ] = true;
+                    while (! filteredMap[_parent.id]) {
+                        filteredMap[ _parent.id ] = true;
                         _parent = this._projects._index[ _parent.parentProjectId ];
                     }
                     _parent = null;
 
                     // Display current project
-                    filtered[ project.id ] = true;
+                    filteredMap[ project.id ] = true;
                 }
             }
 
             // Iterate children
             if (project._children.length) {
                 for (var i = 0, len = project._children.length; i < len; i++) {
-                    this._filterProject(project._children[i], match ? null : filter, filtered);
+                    this._filterProject(project._children[i], match ? null : filter, filteredMap, excludedMap, allowedMap);
                 }
             }
 
-            return filtered;
+            return filteredMap;
         },
 
         /**
