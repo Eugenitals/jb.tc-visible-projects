@@ -110,6 +110,7 @@
         },
 
         /**
+         * Returns a map of projects that matched with filter
          * @param filter {String}
          * @param [isProgressive] {Boolean} true to filter over current _filteredProjectsMap
          * @return {Object} map of visible projects
@@ -121,12 +122,14 @@
 
             // Fastest for empty filter only
             if (! filter.length) {
+                // todo: exclude selected projects
                 return this._projects._index;
             }
 
             return this._filterProject(this._rootProject, filter, {});
         },
 
+        // todo: exclude selected projects
         _filterProject: function (project, filter, filtered) {
             var match = false;
 

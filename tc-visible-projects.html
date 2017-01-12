@@ -18,9 +18,9 @@ Name | Type | Description | Default
 `--tc-secondary-color` | Prop |  Application secondary color | #39E865
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
-`--tc-project-selector-item` | Mixin |  Applied to a project item | {}
-`--tc-project-selector-item-hover` | Mixin |  Applied to a project item :hover | {}
-`--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item :nth-of-type(2n)  | {}
+`--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
+`--tc-project-selector-item-template` | Mixin |  Applied to a project item  | {}
+`--tc-project-selector-item-template-focused` | Mixin |  Applied to a project item :hover and :focus  | {}
 
 @demo demo/index.html
 -->
@@ -369,11 +369,11 @@ Name | Type | Description | Default
 
                     /**
                      * Highlight count per iteration.
-                     * Typically ~max projects rows inside selector
+                     * Typically ~max visible rows inside selector
                      */
                     highlightFactor: {
                         type: Number,
-                        value: 20
+                        value: 30
                     },
 
                     /**
@@ -512,6 +512,11 @@ Name | Type | Description | Default
                     this._isShowAllProjectsVisible = false;
                 },
 
+                /**
+                 * Show/hide hidden projects nodes based on filter
+                 * @param filter {String}
+                 * @param [isProgressive] {Boolean}
+                 */
                 _filterProjectsNodes: function (filter, isProgressive) {
                     var filtered = this._getFilteredProject(filter, isProgressive);
                     var highlight = [];
