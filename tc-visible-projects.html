@@ -291,7 +291,11 @@ Name | Type | Description | Default
                 FOCUSED: 'focused',
                 HIDDEN: 'hidden'
             };
-            
+
+            var log = emptyFn;
+
+            function emptyFn() {}
+
             function getDelegateTarget(source, delegator, cls) {
                 var target = null;
 
@@ -319,7 +323,7 @@ Name | Type | Description | Default
 
                 var ts = (new Date()).getTime();
                 this._filterProjectsNodes(filter, isProgressive);
-                console.log('Filtration time: ', (new Date()).getTime() - ts);
+                log('Filtration time: ', (new Date()).getTime() - ts);
             };
 
             Polymer({
@@ -355,8 +359,29 @@ Name | Type | Description | Default
                     noHighlight: {
                         type: Boolean,
                         value: false
+                    },
+
+                    /**
+                     * Highlight count per iteration.
+                     * Typically ~max projects rows inside selector
+                     */
+                    highlightFactor: {
+                        type: Number,
+                        value: 20
+                    },
+
+                    /**
+                     * Set to true to enable logs
+                     */
+                    debug: {
+                        type: Boolean,
+                        value: false,
+                        observer: '_debugChanged'
                     }
                 },
+
+                /** @type {Number} */
+                _readyTs: NaN,
 
                 /** @type {String} */
                 _lastFilterValue: '',
@@ -374,16 +399,17 @@ Name | Type | Description | Default
                 _projectTemplateFn: null,
 
                 ready: function () {
+                    this._readyTs = (new Date()).getTime();
                     this._projectsNodes = [];
                     this._initProjectTemplate();
                     this.loadProjects(this.url);
                 },
 
                 attached: function () {
-                    // Wait ~10 ms until local DOM initialized
+                    // Ensure local DOM initialized
                     this.async(function () {
                         this.$.hiddenProjectsFilter.focus();
-                    }, 10);
+                    }, 1);
                 },
 
                 _ioSetLoading: function (isOn) {
@@ -423,6 +449,10 @@ Name | Type | Description | Default
                 _ioRenderHiddenProjects: function (nodes) {
                     Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
                     this._projectsNodes = this.$.hiddenProjectsSelector.childNodes;
+
+                    this.async(function () {
+                        log('Initial render time: ', (new Date()).getTime() - this._readyTs);
+                    }, 1);
                 },
 
                 _ioApplyCurrentFilter: ioApplyCurrentFilter,
@@ -436,6 +466,14 @@ Name | Type | Description | Default
                         this._ioApplyCurrentFilter = ioApplyCurrentFilter;
                     } else {
                         this._ioApplyCurrentFilter = _.debounce(ioApplyCurrentFilter, delay);
+                    }
+                },
+
+                _debugChanged: function (isOn) {
+                    if (isOn)  {
+                        log = console.log || emptyFn;
+                    } else {
+                        log = emptyFn;
                     }
                 },
 
@@ -477,27 +515,51 @@ Name | Type | Description | Default
 
                         if (filtered[_id]) {
                             _node.style.display = '';
-                            highlight.push([_node, filterParts]);
+                            highlight.push(_node);
                         } else {
                             _node.style.display = 'none';
                         }
                     }
 
-                    // Async highlighting
+                    // Highlighting is heavy, so do it async to prevent UI blocks
                     if (! this.noHighlight) {
                         this.async(function () {
-                            highlight.forEach(function (_highlight) {
-                                this._highlightProject.apply(this, _highlight);
-                            }, this);
-                        }, 10);
+                            this._highlightProjects(highlight, filterParts);
+                        }, 1);
                     }
                 },
 
                 /**
-                 * Highlight name parts from left to right
-                 * @param project {Object}
+                 * Iteratively highlight all nodes (non blocking UI)
+                 * @param nodes {Array<Element>}
                  * @param [highlight] {Array<String>} strings to highlight
-                 * @return {String}
+                 */
+                _highlightProjects: function (nodes, highlight, step) {
+                    step = step || 0;
+
+                    var stepSize = this.highlightFactor;
+                    var index = step * stepSize;
+                    var length = index + stepSize > nodes.length
+                        ? nodes.length
+                        : index + stepSize;
+
+                    while (index < length) {
+                        this._highlightProject(nodes[index], highlight);
+                        index++;
+                    }
+
+                    // Next iteration
+                    if (!(index >= nodes.length - 1)) {
+                        this.async(function () {
+                            this._highlightProjects(nodes, highlight, step + 1);
+                        }, 1);
+                    }
+                },
+
+                /**
+                 * Highlight node name
+                 * @param node {Element}
+                 * @param [highlight] {Array<String>} strings to highlight
                  */
                 _highlightProject: function (node, highlight) {
                     var name = node.getAttribute('data-name');

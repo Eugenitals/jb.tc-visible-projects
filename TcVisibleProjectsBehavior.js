@@ -166,10 +166,8 @@
          * @param result {{count: Number, href: String, project: Array}}
          */
         _onProjectsLoaded: function (projects) {
-            var ts = (new Date()).getTime();
             this._projects = this._parseProjects(projects);
             this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
-            console.log('Initial render time: ', (new Date()).getTime() - ts);
             this._ioApplyCurrentFilter();
         },
 
