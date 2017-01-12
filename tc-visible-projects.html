@@ -223,14 +223,12 @@ Name | Type | Description | Default
 
                     <td class="projects-container">
                         <div class="projects-container__title">
-
-                            <!-- "keyup" event used here instead of "input" due to IE9 compatibility -->
                             <input id="hiddenProjectsFilter"
                                    type="text" placeholder="Find projects by name..."
                                    on-focus="_onFilterFocus"
                                    on-keyup="_onFilterKeyup">
 
-                            <!-- Very special placeholder for IE9 -->
+                            <!-- Very special placeholder for IE -->
                             <!--[if IE]>
                             <span id="ieFilterPlaceholder"
                                   on-click="_ieOnPlaceholderTap"
@@ -527,6 +525,7 @@ Name | Type | Description | Default
                             this._ioApplyCurrentFilter();
                     }
 
+                    /* IE Placeholder show/hide */
                     if (this.$.ieFilterPlaceholder) {
                         if (!!e.target.value) {
                             this.$.ieFilterPlaceholder.classList.add(Classes.HIDDEN);
