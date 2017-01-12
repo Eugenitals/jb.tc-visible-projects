@@ -246,7 +246,7 @@ Name | Type | Description | Default
                             <iron-icon id="searchIcon" icon="icons:search"></iron-icon>
                         </div>
 
-                        <div class="projects-container__body">
+                        <div id="hiddenProjectsBody" class="projects-container__body">
 
                             <template is="dom-if" if="[[_isLoading]]">
                                 <div id="loader" class="text-secondary">
@@ -311,6 +311,9 @@ Name | Type | Description | Default
             }
 
             function ioApplyCurrentFilter () {
+                // Prevent highlight progress
+                this.cancelAsync(this._highlightJob);
+
                 var filter = this._ioGetFilter();
 
                 // Coz we use "keyup" event we should ensure that our filter is changed
@@ -324,6 +327,9 @@ Name | Type | Description | Default
                 var ts = (new Date()).getTime();
                 this._filterProjectsNodes(filter, isProgressive);
                 log('Filtration time: ', (new Date()).getTime() - ts);
+
+                // Reset scroll
+                this.$.hiddenProjectsBody.scrollTop = 0;
             };
 
             Polymer({
@@ -397,6 +403,9 @@ Name | Type | Description | Default
 
                 /** @type {Function} */
                 _projectTemplateFn: null,
+
+                /** @type {Object} */
+                _highlightJob: null,
 
                 ready: function () {
                     this._readyTs = (new Date()).getTime();
@@ -523,7 +532,7 @@ Name | Type | Description | Default
 
                     // Highlighting is heavy, so do it async to prevent UI blocks
                     if (! this.noHighlight) {
-                        this.async(function () {
+                        this._highlightJob = this.async(function () {
                             this._highlightProjects(highlight, filterParts);
                         }, 1);
                     }
@@ -550,7 +559,7 @@ Name | Type | Description | Default
 
                     // Next iteration
                     if (!(index >= nodes.length - 1)) {
-                        this.async(function () {
+                        this._highlightJob = this.async(function () {
                             this._highlightProjects(nodes, highlight, step + 1);
                         }, 1);
                     }
