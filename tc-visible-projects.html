@@ -314,9 +314,8 @@ Name | Type | Description | Default
                 this._lastFilterValue = filter;
 
                 var ts = (new Date()).getTime();
-                this._projectsNodes = this._filterProjectsNodes(filter, isProgressive);
-                this._showProjectNodes(this._projectsNodes);
-                console.log((new Date()).getTime() - ts);
+                this._filterProjectsNodes(filter, isProgressive);
+                console.log('Filtration time: ', (new Date()).getTime() - ts);
             };
 
             Polymer({
@@ -356,7 +355,7 @@ Name | Type | Description | Default
                 },
 
                 /** @type {String} */
-                _lastFilterValue: null,
+                _lastFilterValue: '',
 
                 /** @type {Boolean} */
                 _isShowAllProjectsVisible: false,
@@ -364,7 +363,7 @@ Name | Type | Description | Default
                 /** @type {Boolean} */
                 _isLoading: false,
 
-                /** @type {Array<String>} */
+                /** @type {Array<Node>} */
                 _projectsNodes: null,
 
                 /** @type {Function} */
@@ -415,7 +414,7 @@ Name | Type | Description | Default
                  * @param [highlight] {Array<String>} strings to highlight
                  * @return {String}
                  */
-                _ioGetProjectHTML: function (project, highlight) {
+                /*_ioGetProjectHTML: function (project, highlight) {
                     var nameParts = [];
 
                     if (highlight) {
@@ -427,7 +426,7 @@ Name | Type | Description | Default
                             _exec = new RegExp('(' + _.escapeRegExp(_highlight) + ')', 'i').exec(_nameTail);
 
                             if (_exec) {
-                                _matched = _exec[1/* take only first match */];
+                                _matched = _exec[1/!* take only first match *!/];
                                 nameParts.push(_nameTail.substr(0, _exec.index)
                                     + '<span class="' + Classes.HIGHLIGHT + '">' + _matched + '</span>');
                                 _nameTail = _nameTail.substr(_exec.index + _matched.length);
@@ -439,11 +438,24 @@ Name | Type | Description | Default
                         nameParts.push(project.name)
                     }
 
-                    /**
+                    /!**
                      * Creates new object because we don`t know which properties from original project object
                      * will be used in project item custom template, so we need them all.
-                     */
+                     *!/
                     return this._projectTemplateFn(_.create(project, { name: nameParts.join('') }));
+                },*/
+
+                _ioGetProjectHTML: function (project) {
+                    /**
+                    * Creates new object because we don`t know which properties from original project object
+                     * will be used in project item custom template, so we need them all.
+                     */
+                    return this._projectTemplateFn(project);
+                },
+
+                _ioRenderHiddenProjects: function (nodes) {
+                    Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
+                    this._projectsNodes = this.$.hiddenProjectsSelector.childNodes;
                 },
 
                 _ioApplyCurrentFilter: ioApplyCurrentFilter,
@@ -474,23 +486,28 @@ Name | Type | Description | Default
                     }
 
                     this._projectTemplateFn = _.template([
-                        '<li class="' + Classes.PROJECT + '">',
-                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}" data-id="${id}">',
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}">',
+                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
                             '</div>',
                         '</li>'
                     ].join(''));
                 },
 
-                _showProjectNodes: function (nodes, isForced) {
-                    this._projectsNodes = nodes;
+                _showProjectNodes: function () {
+                    this._isShowAllProjectsVisible = false;
+                },
 
-                    if (!!isForced || this._projectsNodes.length <= this.projectsDisplayLimit) {
-                        this._isShowAllProjectsVisible = false;
-                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
-                    } else {
-                        this._isShowAllProjectsVisible = true;
-                        Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = '';
+                _filterProjectsNodes: function (filter, isProgressive) {
+                    var filtered = this._getFilteredProject(filter, isProgressive);
+                    var filterParts = filter.split(' ');
+                    var _node, _id;
+
+                    for (var i = 0, len = this._projectsNodes.length; i < len; i++) {
+                        _node = this._projectsNodes[i];
+                        _id = _node.getAttribute('data-id');
+
+                        _node.style.display = filtered[_id] ? '' : 'none';
                     }
                 },
 
@@ -499,7 +516,7 @@ Name | Type | Description | Default
                  */
                 _selectNextProject: function () {
                     if (this._isShowAllProjectsVisible) {
-                        this._showProjectNodes(this._projectsNodes, true);
+                        this._showProjectNodes();
                     }
                 },
 
@@ -559,7 +576,7 @@ Name | Type | Description | Default
 
                 _onShowAllTap: function (e) {
                     e.stopPropagation();
-                    this._showProjectNodes(this._projectsNodes, true);
+                    this._showProjectNodes();
                 },
 
                 /**
