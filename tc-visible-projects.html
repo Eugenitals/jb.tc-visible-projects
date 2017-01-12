@@ -141,8 +141,7 @@ Name | Type | Description | Default
                 @apply(--tc-project-selector-item-nth-even);
             }
             .project-item:hover,
-            .project-item:focus,
-            .project-item.focused {
+            .project-item:focus {
                 position: relative;
                 cursor: pointer;
                 outline: 0;
@@ -162,8 +161,14 @@ Name | Type | Description | Default
                 @apply(--tc-project-selector-item-template);
             }
 
+            .project-item:focus .project-item__template,
             .project-item:hover .project-item__template {
                 @apply(--tc-project-selector-item-template-focused);
+            }
+
+            .project-item:focus .highlight,
+            .project-item:hover .highlight {
+                background-color: inherit;
             }
 
             /*.project-item:hover:after {*/
@@ -288,7 +293,6 @@ Name | Type | Description | Default
                 PROJECT_TEMPLATE: 'project-item__template',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
-                FOCUSED: 'focused',
                 HIDDEN: 'hidden'
             };
 
