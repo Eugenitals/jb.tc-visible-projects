@@ -233,10 +233,6 @@ Name | Type | Description | Default
                                 class="projects-container__selector"
                                 on-tap="_onVisibleProjectTapDelegator">
                                 <!-- ...visible projects will be here... -->
-
-                                <template is="dom-repeat" items="[[_selectedProjects]]" as="project">
-                                    <li>[[project.id]]:[[project.name]]</li>
-                                </template>
                             </ul>
                         </div>
                     </td>
@@ -348,7 +344,7 @@ Name | Type | Description | Default
 
             Polymer({
                 commit: function () {
-                    this.$.selectedProjectsStore.value = this._selectedProjects;
+                    this.$.selectedProjectsStore.value = this._getSelectedProjects();
                     this.$.selectedProjectsStore.save();
                 },
 
@@ -490,9 +486,15 @@ Name | Type | Description | Default
                     Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = html.join('');
                     this._projectsNodes = this.$.hiddenProjectsSelector.childNodes;
 
+                    //todo: update selected projects
+
                     this.async(function () {
                         log('Initial render time: ', (new Date()).getTime() - this._readyTs);
                     }, 1);
+                },
+
+                _ioRenderVisibleProjects: function (html) {
+                    Polymer.dom(this.$.visibleProjectsSelector).innerHTML = html.join('');
                 },
 
                 /**
@@ -648,8 +650,6 @@ Name | Type | Description | Default
                     } else {
                         this._unselectProject(id);
                     }
-
-                    log(this._selectedProjects);
                 },
 
                 /**

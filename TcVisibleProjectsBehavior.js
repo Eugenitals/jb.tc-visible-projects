@@ -62,7 +62,7 @@
         /** @type {Object} */
         _currentFilteredProjects: null,
 
-        /** @type {Object} */
+        /** @type {Array} */
         _selectedProjects: null,
 
         /**
@@ -112,6 +112,17 @@
                 project._children.forEach(function (_project) {
                     html.push.apply(html, self._getProjectNodes(_project));
                 })
+            }
+
+            return html;
+        },
+
+        // todo: levels?
+        _getSelectedProjectNodes: function () {
+            var html = [];
+
+            for (var i = 0, len = this._selectedProjects.length; i < len; i++) {
+                html.push(this._ioGetProjectHTML(this._projects._index[ this._selectedProjects[i] ]));
             }
 
             return html;
@@ -224,11 +235,15 @@
 
             if (selected.length) {
                 for (var i = 0, len = selected.length; i < len; i++) {
-                    this._selectedProjects._index[ selected[i].id ] = selected[i];
+                    this._selectedProjects._index[selected[i]] = selected[i];
                 }
             }
 
             //todo: filter
+        },
+
+        _getSelectedProjects: function () {
+            return this._selectedProjects;
         },
 
         /**
@@ -250,9 +265,8 @@
             }
 
             // Select project
-            var selected = { "id": project.id, "name": project.name };
-            this._selectedProjects.push(selected);
-            this._selectedProjects._index[ project.id ] = selected;
+            this._selectedProjects.push(project.id);
+            this._selectedProjects._index[ project.id ] = project.id;
 
             // Select children
             if (project._children.length) {
@@ -276,6 +290,7 @@
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
             this._currentFilteredProjects = this._projects._index;
+            this._ioRenderVisibleProjects(this._getSelectedProjectNodes());
             this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
             this._ioApplyCurrentFilter();
         },
