@@ -100,6 +100,27 @@
             return result;
         },
 
+        _parseSelectedProjects: function (selectedProjectsList) {
+            var deletedProjects = {};
+            this._selectedProjects = [];
+            this._selectedProjects._index = {};
+
+            if (selectedProjectsList.length) {
+                var _project;
+                for (var i = 0, len = selectedProjectsList.length; i < len; i++) {
+                    _project = this._projects._index[ selectedProjectsList[i] ];
+
+                    // Project may be already deleted
+                    if (! _project) {
+                        deletedProjects[ selectedProjectsList[i] ] = true;
+                        continue;
+                    }
+
+                    this._addSelectedProject(_project, true);
+                }
+            }
+        },
+
         /**
          * @param project {Object}
          * @return {Array<String>}
@@ -117,12 +138,17 @@
             return html;
         },
 
-        // todo: levels?
-        _getSelectedProjectNodes: function () {
+        _getSelectedProjectNodes: function (projects) {
             var html = [];
 
-            for (var i = 0, len = this._selectedProjects.length; i < len; i++) {
-                html.push(this._ioGetProjectHTML(this._projects._index[ this._selectedProjects[i] ]));
+            var _project;
+            for (var i = 0, len = projects.length; i < len; i++) {
+                _project = projects[i];
+                html.push(this._ioGetProjectHTML(_project));
+
+                if (_project._children.length) {
+                    html.push.apply(html, this._getSelectedProjectNodes(_project._children))
+                }
             }
 
             return html;
@@ -228,15 +254,11 @@
          * @param selected {[{name:String, id:String}]}
          */
         _setSelectedProjects: function (selected) {
-            selected = selected || [];
+            this._selectedProjects = selected || [];
 
-            this._selectedProjects = selected;
-            this._selectedProjects._index = {};
-
-            if (selected.length) {
-                for (var i = 0, len = selected.length; i < len; i++) {
-                    this._selectedProjects._index[selected[i]] = selected[i];
-                }
+            if (this._projects) {
+                this._parseSelectedProjects(this._selectedProjects);
+                this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
             }
 
             //todo: filter
@@ -246,14 +268,8 @@
             return this._selectedProjects;
         },
 
-        /**
-         * Select project and all his visible children
-         * @param project {Object|String} project or project ID
-         */
-        _selectProject: function (project) {
-            project = _.isString(project)
-                ? this._getProjectById(project)
-                : project;
+        _selectProject: function (projectId) {
+            var project = this._getProjectById(projectId);
 
             if (! project) {
                 return;
@@ -264,14 +280,47 @@
                 return;
             }
 
-            // Select project
-            this._selectedProjects.push(project.id);
-            this._selectedProjects._index[ project.id ] = project.id;
+            this._addSelectedProject(project);
+            this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
+        },
+
+        /**
+         * Select project and all his visible children
+         * @param project {Object}
+         */
+        _addSelectedProject: function (project, ignoreChildren) {
+            var _selectedProject = cloneSimpleObject(project);
+            _selectedProject._children = [];
+            var _parent = this._projects._index [ project.parentProjectId ];
+            var _selectedParent;
+
+            while (_parent !== this._rootProject) {
+                if (this._selectedProjects._index[ _parent.id ]) {
+                    _selectedParent = this._selectedProjects._index[ _parent.id ];
+                    break;
+                }
+                else {
+                    // Extend child name
+                    _selectedProject.name = _parent.name + ' → ' + _selectedProject.name;
+                }
+                _parent = this._projects._index[ _parent.parentProjectId ];
+            }
+
+            if (_selectedParent) {
+                _selectedProject._level = _selectedParent._level + 1;
+                _selectedParent._children.push(_selectedProject);
+            } else {
+                _selectedProject._level = 1;
+                this._selectedProjects.push(_selectedProject);
+            }
+
+            // Add to index
+            this._selectedProjects._index[ _selectedProject.id ] = _selectedProject;
 
             // Select children
-            if (project._children.length) {
+            if (! ignoreChildren && project._children.length) {
                 for (var i = 0, len = project._children.length; i < len; i++) {
-                    this._selectProject(project._children[i]);
+                    this._addSelectedProject(project._children[i]);
                 }
             }
         },
@@ -289,8 +338,9 @@
          */
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
+            this._parseSelectedProjects(this._selectedProjects);
             this._currentFilteredProjects = this._projects._index;
-            this._ioRenderVisibleProjects(this._getSelectedProjectNodes());
+            this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
             this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
             this._ioApplyCurrentFilter();
         },
