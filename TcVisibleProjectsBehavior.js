@@ -7,8 +7,13 @@
 (function (Polymer, Ajax, _) {
     var Errors = {
         COMMUNICATION_ERROR: _.template('Server "<%= url %>" returned status <%= status %>'),
-        CAN_NOT_PARSE_RESPONSE: 'Error while parse response'
+        CAN_NOT_PARSE_RESPONSE: 'Error while parse response',
+        PROJECT_NOT_FOUND: _.template('Project <%= id %> is not found')
     };
+
+    function cloneSimpleObject(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
 
     Polymer.jb = Polymer.jb || {};
 
@@ -55,7 +60,10 @@
         _rootProject: null,
 
         /** @type {Object} */
-        _lastFilteredMap: null,
+        _currentFilteredProjects: null,
+
+        /** @type {Object} */
+        _selectedProjects: null,
 
         /**
          * @param rawProjects {Array<{ id:String, parentProjectId:String, name:String }>}
@@ -122,18 +130,28 @@
 
             // Fastest for empty filter only
             if (! filter.length) {
-                // todo: exclude selected projects
-                return this._lastFilteredMap = this._projects._index;
+                this._currentFilteredProjects = {};
+                var _projectsIds = Object.keys(this._projects._index);
+
+                // Omit selected projects
+                for (var i = 0, len = _projectsIds.length; i < len; i ++) {
+                    if (! this._selectedProjects._index[ _projectsIds[i] ]) {
+                        this._currentFilteredProjects[ _projectsIds[i] ] = true;
+                    }
+                }
+
+                return this._currentFilteredProjects;
             }
 
             var preFiltered = {};
             preFiltered[ this._rootProject.id ] = true;
 
             var allowed = isProgressive
-                ? this._lastFilteredMap
+                ? this._currentFilteredProjects
                 : null
 
-            return this._lastFilteredMap = this._filterProject(this._rootProject, filter, preFiltered, {}, allowed);
+            return this._currentFilteredProjects
+                = this._filterProject(this._rootProject, filter, preFiltered, {}, allowed);
         },
 
         // todo: exclude selected projects
@@ -186,11 +204,78 @@
             return filteredMap;
         },
 
+        _getProjectById: function (id) {
+            if (! this._projects || ! this._projects._index[ id ]) {
+                return this._ioFireError(Errors.PROJECT_NOT_FOUND({ id: id }), 'PROJECT_NOT_FOUND');
+            }
+
+            return this._projects._index[ id ];
+        },
+
+        /**
+         * Init selection projects
+         * @param selected {[{name:String, id:String}]}
+         */
+        _setSelectedProjects: function (selected) {
+            selected = selected || [];
+
+            this._selectedProjects = selected;
+            this._selectedProjects._index = {};
+
+            if (selected.length) {
+                for (var i = 0, len = selected.length; i < len; i++) {
+                    this._selectedProjects._index[ selected[i].id ] = selected[i];
+                }
+            }
+
+            //todo: filter
+        },
+
+        /**
+         * Select project and all his visible children
+         * @param project {Object|String} project or project ID
+         */
+        _selectProject: function (project) {
+            project = _.isString(project)
+                ? this._getProjectById(project)
+                : project;
+
+            if (! project) {
+                return;
+            }
+
+            // Check for selection availability
+            if (this._selectedProjects._index[ project.id ] || ! this._currentFilteredProjects[ project.id ]) {
+                return;
+            }
+
+            // Select project
+            var selected = { "id": project.id, "name": project.name };
+            this._selectedProjects.push(selected);
+            this._selectedProjects._index[ project.id ] = selected;
+
+            // Select children
+            if (project._children.length) {
+                for (var i = 0, len = project._children.length; i < len; i++) {
+                    this._selectProject(project._children[i]);
+                }
+            }
+        },
+
+        _unselectProject: function (projectId) {
+            var project = this._getProjectById(projectId);
+
+            if (! project) {
+                return;
+            }
+        },
+
         /**
          * @param result {{count: Number, href: String, project: Array}}
          */
         _onProjectsLoaded: function (projects) {
             this._projects = this._parseProjects(projects);
+            this._currentFilteredProjects = this._projects._index;
             this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
             this._ioApplyCurrentFilter();
         },
@@ -199,7 +284,7 @@
          * @param error {Error}
          */
         _onProjectsLoadError: function (error) {
-            this._ioShowError(error.message, 'LOAD_PROJECTS_ERROR');
+            this._ioFireError(error.message, 'LOAD_PROJECTS_ERROR');
         }
     };
 })(window.Polymer || {}, window.Ajax, window._);

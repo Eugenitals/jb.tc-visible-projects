@@ -1,6 +1,7 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-localstorage/iron-localstorage.html">
 <link rel="import" href="./tc-visible-projects-behavior.html">
 
 <!--
@@ -133,9 +134,12 @@ Name | Type | Description | Default
                 padding: 0;
             }
 
+            .projects-container__selector li {
+                list-style-type: none;
+            }
+
             .project-item {
                 cursor: default;
-                list-style-type: none;
             }
             .project-item:nth-of-type(2n) {
                 @apply(--tc-project-selector-item-nth-even);
@@ -215,6 +219,8 @@ Name | Type | Description | Default
         </style>
         <![endif]-->
 
+        <iron-localstorage id="selectedProjectsStore" name="tc-visible-projects:selected-projects"></iron-localstorage>
+
         <table id="body">
             <tbody>
                 <tr>
@@ -227,6 +233,10 @@ Name | Type | Description | Default
                                 class="projects-container__selector"
                                 on-tap="_onVisibleProjectTapDelegator">
                                 <!-- ...visible projects will be here... -->
+
+                                <template is="dom-repeat" items="[[_selectedProjects]]" as="project">
+                                    <li>[[project.id]]:[[project.name]]</li>
+                                </template>
                             </ul>
                         </div>
                     </td>
@@ -337,6 +347,11 @@ Name | Type | Description | Default
             };
 
             Polymer({
+                commit: function () {
+                    this.$.selectedProjectsStore.value = this._selectedProjects;
+                    this.$.selectedProjectsStore.save();
+                },
+
                 is: 'tc-visible-projects',
                 behaviors: [ Polymer.jb.TcVisibleProjectsBehavior ],
 
@@ -415,6 +430,7 @@ Name | Type | Description | Default
                     this._readyTs = (new Date()).getTime();
                     this._projectsNodes = [];
                     this._initProjectTemplate();
+                    this._initSelectedProjects();
                     this.loadProjects(this.url);
                 },
 
@@ -447,10 +463,17 @@ Name | Type | Description | Default
                  * @param message {String}
                  * @param code {String}
                  */
-                _ioShowError: function (message, code) {
+                _ioFireError: function (message, code) {
                     this.fire('error', { message: message, code: code });
+                    log(code + ': \'' + message + '\'');
                 },
 
+
+                /**
+                 * Compile project HTML using template
+                 * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @return {String} valid raw HTML
+                 */
                 _ioGetProjectHTML: function (project) {
                     /**
                     * Creates new object because we don`t know which properties from original project object
@@ -459,8 +482,12 @@ Name | Type | Description | Default
                     return this._projectTemplateFn(project);
                 },
 
-                _ioRenderHiddenProjects: function (nodes) {
-                    Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = nodes.join('');
+                /**
+                 * Render hidden projects list inside selector
+                 * @param html {Array<String>} list of HTML strings
+                 */
+                _ioRenderHiddenProjects: function (html) {
+                    Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = html.join('');
                     this._projectsNodes = this.$.hiddenProjectsSelector.childNodes;
 
                     this.async(function () {
@@ -468,6 +495,9 @@ Name | Type | Description | Default
                     }, 1);
                 },
 
+                /**
+                 * Applies current filter if it was changed
+                 */
                 _ioApplyCurrentFilter: ioApplyCurrentFilter,
 
                 /**
@@ -510,6 +540,11 @@ Name | Type | Description | Default
                             '</div>',
                         '</li>'
                     ].join(''));
+                },
+
+                _initSelectedProjects: function () {
+                    this.$.selectedProjectsStore.reload();
+                    this._setSelectedProjects(this.$.selectedProjectsStore.value);
                 },
 
                 _showProjectNodes: function () {
@@ -607,10 +642,20 @@ Name | Type | Description | Default
                     Polymer.dom(Polymer.dom(node).querySelector('[is-name]')).innerHTML = nameParts.join('');
                 },
 
+                _setProjectSelected: function (id, isSelected) {
+                    if (isSelected) {
+                        this._selectProject(id);
+                    } else {
+                        this._unselectProject(id);
+                    }
+
+                    log(this._selectedProjects);
+                },
+
                 /**
                  * todo: impl
                  */
-                _selectNextProject: function () {
+                _focusNextProject: function () {
                     if (this._isShowAllProjectsVisible) {
                         this._showProjectNodes();
                     }
@@ -619,7 +664,7 @@ Name | Type | Description | Default
                 /**
                  * todo: impl
                  */
-                _selectPrevProject: function () {
+                _focusPrevProject: function () {
                 },
 
                 _onFilterKeyup: function (e) {
@@ -627,12 +672,10 @@ Name | Type | Description | Default
 
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
-                            this._selectNextProject();
+                            this._focusNextProject();
                             break;
                         case Keycodes.UP:
-                            this._selectPrevProject();
-                            break;
-                        case Keycodes.ENTER:
+                            this._focusPrevProject();
                             break;
                         default:
                             this._ioApplyCurrentFilter();
@@ -657,7 +700,8 @@ Name | Type | Description | Default
                     var target = getDelegateTarget(e.target, this.$.hiddenProjectsSelector, Classes.PROJECT);
 
                     if (target) {
-                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
+//                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
+                        this._setProjectSelected(target.getAttribute('data-id'), true);
                     }
                 },
 
@@ -666,7 +710,8 @@ Name | Type | Description | Default
                     var target = getDelegateTarget(e.target, this.$.visibleProjectsSelector, Classes.PROJECT);
 
                     if (target) {
-                        Polymer.dom(this.$.hiddenProjectsSelector).appendChild(target);
+//                        Polymer.dom(this.$.hiddenProjectsSelector).appendChild(target);
+                        this._setProjectSelected(target.getAttribute('data-id'), false);
                     }
                 },
 
