@@ -700,7 +700,7 @@ Name | Type | Description | Default
                     var target = getDelegateTarget(e.target, this.$.hiddenProjectsSelector, Classes.PROJECT);
 
                     if (target) {
-                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
+//                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
                         this._setProjectSelected(target.getAttribute('data-id'), true);
                     }
                 },

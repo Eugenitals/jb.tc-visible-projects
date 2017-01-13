@@ -190,6 +190,7 @@
                 this._currentFilteredProjects = {};
                 var _projectsIds = Object.keys(this._projects._index);
 
+                // todo: exclude selected projects
                 // Omit selected projects
                 for (var i = 0, len = _projectsIds.length; i < len; i ++) {
                     if (! this._selectedProjects._index[ _projectsIds[i] ]) {
@@ -259,14 +260,6 @@
             }
 
             return filteredMap;
-        },
-
-        _getProjectById: function (id) {
-            if (! this._projects || ! this._projects._index[ id ]) {
-                return this._ioFireError(Errors.PROJECT_NOT_FOUND({ id: id }), 'PROJECT_NOT_FOUND');
-            }
-
-            return this._projects._index[ id ];
         },
 
         /**
@@ -340,12 +333,43 @@
             return _selectedProject;
         },
 
-        _removeSelectedProject: function (selectedProject) {
+        _removeSelectedProject: function (selectedProject, ignoreParent) {
+            // Unselect all children
+            if (selectedProject._children.length) {
+                var _children = selectedProject._children.slice();
+                for (var i = 0, len = _children.length; i < len; i++) {
+                    this._removeSelectedProject(_children[i], true);
+                }
+            }
 
+            // Get selected parent
+            var parent = this._projects._index[ selectedProject.parentProjectId ];
+            var selectedParent;
+            while (parent !== this._rootProject) {
+                if (this._selectedProjects._index[ parent.id ]) {
+                    selectedParent = this._selectedProjects._index[ parent.id ];
+                    break;
+                }
+                parent = this._projects._index[ parent.parentProjectId ];
+            }
+
+            if (selectedParent) {
+                selectedParent._children.splice(selectedParent._children.indexOf(selectedProject), 1);
+
+                // Remove parent
+                if (!ignoreParent && ! selectedParent._children.length) {
+                    this._removeSelectedProject(selectedParent);
+                }
+            } else {
+                this._selectedProjects.splice(this._selectedProjects.indexOf(selectedProject), 1);
+            }
+
+            // Delete index
+            delete this._selectedProjects._index[ selectedProject.id ];
         },
 
         _selectProject: function (projectId) {
-            var project = this._getProjectById(projectId);
+            var project = this._projects._index[ projectId ];
 
             if (! project) {
                 return;
@@ -353,22 +377,24 @@
 
             // Check for selection availability
             if (this._selectedProjects._index[ project.id ] || ! this._currentFilteredProjects[ project.id ]) {
-                return;
+                return false;
             }
 
             this._addSelectedProject(project, [ project.id ]);
             this._setSelectedProjects(this._getSelectedProjects());
+            return true;
         },
 
         _unselectProject: function (projectId) {
-            var project = this._getProjectById(projectId);
+            var selectedProject = this._selectedProjects._index[ projectId ];
 
-            if (! project) {
-                return;
+            if (! selectedProject) {
+                return false;
             }
 
-            this._removeSelectedProject(project);
-            this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
+            this._removeSelectedProject(selectedProject);
+            this._setSelectedProjects(this._getSelectedProjects());
+            return true;
         },
 
         /**
