@@ -229,22 +229,6 @@
                 return {};
             }
 
-            // Fastest for empty filter only
-            if (! filter.length) {
-                this._currentFilteredProjects = {};
-                var _projectsIds = Object.keys(this._projects._index);
-
-                // todo: exclude selected projects
-                // Omit selected projects
-                for (var i = 0, len = _projectsIds.length; i < len; i ++) {
-                    if (! this._selectedProjects._index[ _projectsIds[i] ]) {
-                        this._currentFilteredProjects[ _projectsIds[i] ] = true;
-                    }
-                }
-
-                return this._currentFilteredProjects;
-            }
-
             var preFiltered = {};
             preFiltered[ this._rootProject.id ] = true;
 
@@ -253,10 +237,9 @@
                 : null
 
             return this._currentFilteredProjects
-                = this._filterProject(this._rootProject, filter, preFiltered, {}, allowed);
+                = this._filterProject(this._rootProject, filter, preFiltered, this._selectedProjects._index, allowed);
         },
 
-        // todo: exclude selected projects
         /**
          * Recursively search projects by filter
          * @param project {Object} current project
@@ -267,25 +250,30 @@
          * @return {Object} extended filteredMap
          */
         _filterProject: function (project, filter, filteredMap, excludedMap, allowedMap) {
+            excludedMap = excludedMap || {};
             var match = false;
 
-            // If excluded or no allowed
-            if (excludedMap[ project.id ] || (allowedMap && !allowedMap[ project.id ])) {
+            // If no allowed
+            if (allowedMap && ! allowedMap[ project.id ]) {
                 return filteredMap;
             }
 
-            if (! filter) {
-                filteredMap[ project.id ] = true;
-            } else {
-                var filterParts = filter.split(' ');
-                var regexp = new RegExp('(' + filterParts.map(_.escapeRegExp).join(').+(') + ')', 'i');
-
-                if (regexp.test(project._fullName)) {
+            if (! excludedMap[ project.id ]) {
+                if (! filter) {
                     match = true;
+                } else {
+                    var filterParts = filter.split(' ');
+                    var regexp = new RegExp('(' + filterParts.map(_.escapeRegExp).join(').+(') + ')', 'i');
 
+                    if (regexp.test(project._fullName)) {
+                        match = true;
+                    }
+                }
+
+                if (match) {
                     // Display all parents
                     var _parent = this._projects._index[ project.parentProjectId ];
-                    while (! filteredMap[_parent.id]) {
+                    while (_parent && !filteredMap[_parent.id]) {
                         filteredMap[ _parent.id ] = true;
                         _parent = this._projects._index[ _parent.parentProjectId ];
                     }
@@ -317,8 +305,6 @@
                 this._parseSelectedProjects();
                 this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
             }
-
-            //todo: filter
         },
 
         _getSelectedProjects: function () {
@@ -464,8 +450,8 @@
             this._projects = this._parseProjects(projects);
             this._currentFilteredProjects = this._projects._index;
             this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
-            this._ioApplyCurrentFilter();
             this._setSelectedProjects(this._selectedProjects);
+            this._ioApplyCurrentFilter();
         },
 
         /**
