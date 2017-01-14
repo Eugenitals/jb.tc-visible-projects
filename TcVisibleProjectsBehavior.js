@@ -18,15 +18,22 @@
     /**
      * Return topologically sorted list of projects IDs
      * @param projects {Array<Object>}
+     * @param [acl] {Object} map of available projects
      * @return {Array<String>}
      */
-    function getProjectsFlatIds(projects) {
+    function getProjectsFlatIds(projects, acl) {
         var result = [];
 
         if (projects.length) {
             projects.forEach(function (_project) {
-                result.push(_project.id);
-                result.push.apply(result, getProjectsFlatIds(_project._children));
+                if (acl) {
+                    if (acl[ _project.id ]) {
+                        result.push(_project.id);
+                    }
+                } else {
+                    result.push(_project.id);
+                }
+                result.push.apply(result, getProjectsFlatIds(_project._children, acl));
             });
         }
 
@@ -308,7 +315,7 @@
         },
 
         _getSelectedProjects: function () {
-            return getProjectsFlatIds(this._selectedProjects);
+            return getProjectsFlatIds(this._selectedProjects, this._selectedProjects._index);
         },
 
         /**
@@ -363,6 +370,10 @@
             return _selectedProject;
         },
 
+        /**
+         * @param selectedProject {Object}
+         * @param [ignoreParent] {Boolean}
+         */
         _removeSelectedProject: function (selectedProject, ignoreParent) {
             // Unselect all children
             if (selectedProject._children.length) {
@@ -406,12 +417,21 @@
             }
 
             // Check for selection availability
-            if (this._selectedProjects._index[ project.id ] || ! this._currentFilteredProjects[ project.id ]) {
+            if (! this._currentFilteredProjects[ project.id ]) {
                 return false;
             }
 
-            this._addSelectedProject(project, [ project.id ]);
+            // Select each available children
+            var projectsIds = getProjectsFlatIds([ project ], this._currentFilteredProjects);
+            var _projectId = [];
+            for (var  i = 0, len = projectsIds.length; i <len; i++) {
+                _projectId = projectsIds[i];
+                this._addSelectedProject(this._projects._index[ _projectId ], projectsIds);
+            }
+
+            // Update selected projects
             this._setSelectedProjects(this._getSelectedProjects());
+            this._ioApplyCurrentFilter(true);
             return true;
         },
 
@@ -424,6 +444,7 @@
 
             this._removeSelectedProject(selectedProject);
             this._setSelectedProjects(this._getSelectedProjects());
+            this._ioApplyCurrentFilter(true);
             return true;
         },
 
