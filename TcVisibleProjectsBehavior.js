@@ -71,6 +71,16 @@
             });
         },
 
+        // todo: impl
+        moveProjectUp: function (projectId) {
+
+        },
+
+        // todo: impl
+        moveProjectDown: function (projectId) {
+
+        },
+
         /** @type {Array} */
         _projects: null,
 

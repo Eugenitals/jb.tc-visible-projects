@@ -16,7 +16,6 @@ Name | Type | Description | Default
 ----------------|-------------|----------
 `--tc-text-color` | Prop | Text color | #000000
 `--tc-primary-color` | Prop |  Application primary color | #0CB0F2
-`--tc-secondary-color` | Prop |  Application secondary color | #39E865
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
@@ -31,8 +30,9 @@ Name | Type | Description | Default
         <style>
             :host {
                 --tc-text-color: rgba(0,0,0,.87);
-                --tc-primary-color: rgba(0,0,0,.87);
-                --tc-secondary-color: rgba(0,0,0,.87);
+                --tc-primary-color: #666;
+                --tc-primary-text-color: #fff;
+
                 --tc-project-selector-height: 370px;
                 --tc-project-selector-highlight-color: #ffff80;
 
@@ -158,11 +158,36 @@ Name | Type | Description | Default
                 margin: -3px -10px -3px -10px;
                 padding: 3px 10px 3px 10px;
 
+                color: var(--tc-primary-text-color);
                 background-color: var(--tc-primary-color);
             }
 
             .project-item__template {
                 @apply(--tc-project-selector-item-template);
+            }
+
+            .project-item__order {
+                display: none;
+                background-color: var(--tc-primary-color);
+                padding-left: 3px;
+                font-size: .8em;
+
+                position: absolute;
+                top: 8px;
+                right: 3px;
+            }
+
+            .project-item__order-arrow {
+                cursor: pointer;
+                padding: 5px;
+                opacity: .5;
+            }
+            .project-item__order-arrow[event-role="index-up"] { padding-right: 2px }
+            .project-item__order-arrow[event-role="index-down"] { padding-left: 2px }
+            .project-item__order-arrow:hover { opacity: 1; }
+
+            #visibleProjectsSelector:hover .project-item:hover .project-item__order {
+                display: inline-block;
             }
 
             .project-item:focus .project-item__template,
@@ -297,6 +322,8 @@ Name | Type | Description | Default
             var Classes = {
                 PROJECT: 'project-item',
                 PROJECT_TEMPLATE: 'project-item__template',
+                PROJECT_ORDER: 'project-item__order',
+                PROJECT_ORDER_ARROW: 'project-item__order-arrow',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
                 HIDDEN: 'hidden'
@@ -306,18 +333,22 @@ Name | Type | Description | Default
 
             function emptyFn() {}
 
-            function getDelegateTarget(source, delegator, cls) {
-                var target = null;
+            function getDelegationInfo(target, delegator) {
+                var role;
 
-                while (source !== delegator && !source.classList.contains(cls)) {
-                    source = Polymer.dom(source).parentNode;
+                while (target !== delegator) {
+                    if (target.hasAttribute('event-role')) {
+                        role = target.getAttribute('event-role');
+                        break;
+                    }
+                    target = Polymer.dom(target).parentNode;
                 }
 
-                if (source.classList.contains(Classes.PROJECT)) {
-                    target =  source;
+                if (role) {
+                    return { target: target, role: role };
                 }
 
-                return target;
+                return null;
             }
 
             function ioApplyCurrentFilter () {
@@ -536,9 +567,13 @@ Name | Type | Description | Default
                     }
 
                     this._projectTemplateFn = _.template([
-                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}">',
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" event-role="select">',
                             '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
+                                '<div class="' + Classes.PROJECT_ORDER + '">',
+                                    '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-up" data-id="${id}" title="Move project up">▲</span>',
+                                    '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-down" data-id="${id}" title="Move project down">▼</span>',
+                                '</div>',
                             '</div>',
                         '</li>'
                     ].join(''));
@@ -697,21 +732,25 @@ Name | Type | Description | Default
 
                 _onHiddenProjectTapDelegator: function (e) {
                     e.stopPropagation();
-                    var target = getDelegateTarget(e.target, this.$.hiddenProjectsSelector, Classes.PROJECT);
+                    var info = getDelegationInfo(e.target, this.$.hiddenProjectsSelector);
 
-                    if (target) {
-//                        Polymer.dom(this.$.visibleProjectsSelector).appendChild(target);
-                        this._setProjectSelected(target.getAttribute('data-id'), true);
+                    if (info && info.role === 'select') {
+                        this._setProjectSelected(info.target.getAttribute('data-id'), true);
                     }
                 },
 
                 _onVisibleProjectTapDelegator: function (e) {
                     e.stopPropagation();
-                    var target = getDelegateTarget(e.target, this.$.visibleProjectsSelector, Classes.PROJECT);
+                    var info = getDelegationInfo(e.target, this.$.visibleProjectsSelector);
 
-                    if (target) {
-//                        Polymer.dom(this.$.hiddenProjectsSelector).appendChild(target);
-                        this._setProjectSelected(target.getAttribute('data-id'), false);
+                    if (info) {
+                        if (info.role === 'select') {
+                            this._setProjectSelected(info.target.getAttribute('data-id'), false);
+                        } else if (info.role === 'index-up') {
+                            this.moveProjectUp(info.target.getAttribute('data-id'));
+                        } else if (info.role === 'index-down') {
+                            this.moveProjectDown(info.target.getAttribute('data-id'));
+                        }
                     }
                 },
 
