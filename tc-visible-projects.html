@@ -130,6 +130,7 @@ Name | Type | Description | Default
             }
 
             .projects-container__selector {
+                outline: 0;
                 margin: 0;
                 padding: 0;
             }
@@ -254,8 +255,7 @@ Name | Type | Description | Default
                             <strong>My visible projects</strong>
                         </div>
                         <div class="projects-container__body">
-                            <ul id="visibleProjectsSelector"
-                                class="projects-container__selector"
+                            <ul id="visibleProjectsSelector" class="projects-container__selector"
                                 on-tap="_onVisibleProjectTapDelegator">
                                 <!-- ...visible projects will be here... -->
                             </ul>
@@ -290,7 +290,9 @@ Name | Type | Description | Default
                                 </div>
                             </template>
 
-                            <ul id="hiddenProjectsSelector" class="projects-container__selector"
+                            <ul id="hiddenProjectsSelector" class="projects-container__selector" tabindex="0"
+                                on-keydown="_onHiddenProjectsSelectorKeydown"
+                                on-focus="_onHiddenProjectsSelectorFocus"
                                 on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
                             </ul>
@@ -305,6 +307,7 @@ Name | Type | Description | Default
         (function () {
             var Keycodes = {
                 UP: 38,
+                LEFT: 37,
                 DOWN: 40,
                 ENTER: 13,
                 ESC: 27
@@ -449,6 +452,9 @@ Name | Type | Description | Default
                 /** @type {Object} */
                 _highlightJob: null,
 
+                /** @type {Node} */
+                _focusedNode: null,
+
                 ready: function () {
                     this._readyTs = (new Date()).getTime();
                     this._projectsNodes = [];
@@ -572,7 +578,8 @@ Name | Type | Description | Default
                     }
 
                     var hiddenProjectTemplate = [
-                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" event-role="select">',
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" ' +
+                            'event-role="select" tabindex="-1">',
                             '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
                                 /* order controls will be */
@@ -696,16 +703,94 @@ Name | Type | Description | Default
                     }
                 },
 
-                /**
-                 * todo: @implementme
-                 */
                 _focusNextProject: function () {
+                    var node;
+
+                    if (! this._focusedNode) {
+                        this.$.hiddenProjectsSelector.focus();
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
+                    } else {
+                        node = Polymer.dom(this._focusedNode).nextSibling;
+                    }
+
+                    while (node) {
+                        if (node.style.display !== 'none') {
+                            break;
+                        }
+                        node = Polymer.dom(node).nextSibling;
+                    }
+
+                    if (! node) {
+                        if (this._projectsNodes.length < 1) {
+                            return;
+                        }
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
+                    }
+
+                    this._focusedNode = node;
+                    this._focusedNode.focus();
                 },
 
-                /**
-                 * todo: @implementme
-                 */
                 _focusPrevProject: function () {
+                    var node;
+
+                    if (! this._focusedNode) {
+                        this.$.hiddenProjectsSelector.focus();
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
+                    } else {
+                        node = Polymer.dom(this._focusedNode).previousSibling;
+                    }
+
+                    while (node) {
+                        if (node.style.display !== 'none') {
+                            break;
+                        }
+                        node = Polymer.dom(node).previousSibling;
+                    }
+
+                    if (! node) {
+                        if (this._projectsNodes.length < 1) {
+                            return;
+                        }
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
+                    }
+
+                    this._focusedNode = node;
+                    this._focusedNode.focus();
+                },
+
+                _onHiddenProjectsSelectorFocus: function (e) {
+                    if (! this._focusedNode && this._projectsNodes.length > 0) {
+                        this._focusedNode = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
+                    }
+
+                    this._focusedNode.focus();
+                },
+
+                _onHiddenProjectsSelectorKeydown: function (e) {
+                    e.stopPropagation();
+
+                    switch (e.keyCode) {
+                        case Keycodes.DOWN:
+                            e.preventDefault();
+                            this._focusNextProject();
+                            break;
+                        case Keycodes.UP:
+                            e.preventDefault();
+                            this._focusPrevProject();
+                            break;
+                        case Keycodes.LEFT:
+                            e.preventDefault();
+                            this._setProjectSelected(e.target.getAttribute('data-id'), true);
+                            this.async(function () {
+                                this._focusNextProject();
+                            }, 100);
+                            break;
+                        case Keycodes.ESC:
+                            e.preventDefault();
+                            this.$.hiddenProjectsFilter.focus();
+                            break;
+                    }
                 },
 
                 _onFilterKeyup: function (e) {
@@ -713,9 +798,13 @@ Name | Type | Description | Default
 
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
+                            e.preventDefault();
+                            this._focusedNode = null;
                             this._focusNextProject();
                             break;
                         case Keycodes.UP:
+                            e.preventDefault();
+                            this._focusedNode = null;
                             this._focusPrevProject();
                             break;
                         default:
@@ -742,6 +831,11 @@ Name | Type | Description | Default
 
                     if (info && info.role === 'select') {
                         this._setProjectSelected(info.target.getAttribute('data-id'), true);
+                        this.async(function () {
+                            this.$.hiddenProjectsSelector.focus();
+                            this._focusedNode = info.target;
+                            this._focusedNode.focus();
+                        }, 100);
                     }
                 },
 
