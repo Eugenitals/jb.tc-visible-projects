@@ -747,9 +747,9 @@ Name | Type | Description | Default
                         if (info.role === 'select') {
                             this._setProjectSelected(info.target.getAttribute('data-id'), false);
                         } else if (info.role === 'index-up') {
-                            this.moveProjectUp(info.target.getAttribute('data-id'));
+                            this.shiftProject(info.target.getAttribute('data-id'), true);
                         } else if (info.role === 'index-down') {
-                            this.moveProjectDown(info.target.getAttribute('data-id'));
+                            this.shiftProject(info.target.getAttribute('data-id'));
                         }
                     }
                 },

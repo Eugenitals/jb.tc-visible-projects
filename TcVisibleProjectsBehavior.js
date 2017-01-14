@@ -71,14 +71,48 @@
             });
         },
 
-        // todo: impl
-        moveProjectUp: function (projectId) {
+        /**
+         * Move selected project down (or up) inside its parent
+         * @param selectedProjectId {String}
+         * @param [isReverse] {Boolean} true to move project up
+         */
+        shiftProject: function (selectedProjectId, isReverse) {
+            var selectedProject = this._selectedProjects._index[ selectedProjectId ];
+            if (! selectedProject) {
+                return;
+            }
+            var selectedProjectParent = this._getSelectedProjectParent(selectedProject);
+            var array;
+            if (selectedProjectParent) {
+                array = selectedProjectParent._children;
+            } else {
+                array = this._selectedProjects;
+            }
+            var index = array.indexOf(selectedProject);
 
-        },
+            // Shift DOWN
+            if (isReverse) {
+                if (index < 1) {
+                    return;
+                } else {
+                    var temp = array[index - 1];
+                    array[index - 1] = array[index];
+                    array[index] = temp;
+                    this._setSelectedProjects(this._getSelectedProjects());
+                }
+            }
 
-        // todo: impl
-        moveProjectDown: function (projectId) {
-
+            // Shift Up
+            else {
+                if (index === array.length - 1) {
+                    return;
+                } else {
+                    var temp = array[index + 1];
+                    array[index + 1] = array[index];
+                    array[index] = temp;
+                    this._setSelectedProjects(this._getSelectedProjects());
+                }
+            }
         },
 
         /** @type {Array} */
@@ -308,14 +342,14 @@
             var _parent = this._projects._index [ project.parentProjectId ];
             var _selectedParent;
 
-            while (_parent !== this._rootProject) {
+            while (_parent) {
                 if (projectsList.indexOf(_parent.id) !== -1) {
                     // Add parent before child
                     _selectedParent
                         = this._addSelectedProject(this._projects._index[ _parent.id ], projectsList, ignoreChildren);
                     break;
                 }
-                else {
+                else if (_parent !== this._rootProject) {
                     // Extend child name
                     _selectedProject.name = _parent.name + ' → ' + _selectedProject.name;
                 }
@@ -355,7 +389,7 @@
             // Get selected parent
             var parent = this._projects._index[ selectedProject.parentProjectId ];
             var selectedParent;
-            while (parent !== this._rootProject) {
+            while (parent) {
                 if (this._selectedProjects._index[ parent.id ]) {
                     selectedParent = this._selectedProjects._index[ parent.id ];
                     break;
@@ -406,6 +440,22 @@
             this._setSelectedProjects(this._getSelectedProjects());
             return true;
         },
+
+        _getSelectedProjectParent: function (selectedProject) {
+            var parent = this._projects._index[selectedProject.parentProjectId];
+
+            if (!parent) {
+                return null;
+            }
+
+            while (parent) {
+                if (this._selectedProjects._index[parent.id]) {
+                    return this._selectedProjects._index[parent.id];
+                }
+                parent = this._projects._index[parent.parentProjectId];
+            }
+        },
+
 
         /**
          * @param result {{count: Number, href: String, project: Array}}
