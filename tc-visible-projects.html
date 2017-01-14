@@ -290,15 +290,6 @@ Name | Type | Description | Default
                                 </div>
                             </template>
 
-                            <template is="dom-if" if="[[_isShowAllProjectsVisible]]">
-                                <div class="text-secondary">
-                                    <strong>[[_projectsNodes.length]]</strong> projects found.
-                                    <a class="href-action" href="#" on-tap="_onShowAllTap">
-                                        Click or "<strong>↓</strong>" to show all
-                                    </a>
-                                </div>
-                            </template>
-
                             <ul id="hiddenProjectsSelector" class="projects-container__selector"
                                 on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
@@ -353,7 +344,7 @@ Name | Type | Description | Default
 
             /**
              * Applies current filter if it was changed
-             * @param forced {Boolean} true - to skip filter dirty checking
+             * @param [forced] {Boolean} true - to skip filter dirty checking
              */
             function ioApplyCurrentFilter (forced) {
                 // Prevent highlight progress
@@ -396,14 +387,6 @@ Name | Type | Description | Default
                     url: String,
 
                     /**
-                     * Maximum number of projects to display without "Show all..."
-                     */
-                    projectsDisplayLimit: {
-                        type: Number,
-                        value: 100
-                    },
-
-                    /**
                      * Filtration input debounce delay
                      */
                     delay: {
@@ -444,9 +427,6 @@ Name | Type | Description | Default
 
                 /** @type {String} */
                 _lastFilterValue: null,
-
-                /** @type {Boolean} */
-                _isShowAllProjectsVisible: false,
 
                 /** @type {Boolean} */
                 _isLoading: false,
@@ -617,10 +597,6 @@ Name | Type | Description | Default
                     this._setSelectedProjects(this.$.selectedProjectsStore.value);
                 },
 
-                _showProjectNodes: function () {
-                    this._isShowAllProjectsVisible = false;
-                },
-
                 /**
                  * Show/hide hidden projects nodes based on filter
                  * @param filter {String}
@@ -724,9 +700,6 @@ Name | Type | Description | Default
                  * todo: @implementme
                  */
                 _focusNextProject: function () {
-                    if (this._isShowAllProjectsVisible) {
-                        this._showProjectNodes();
-                    }
                 },
 
                 /**
@@ -785,11 +758,6 @@ Name | Type | Description | Default
                             this.shiftProject(info.target.getAttribute('data-id'));
                         }
                     }
-                },
-
-                _onShowAllTap: function (e) {
-                    e.stopPropagation();
-                    this._showProjectNodes();
                 },
 
                 /**
