@@ -454,8 +454,17 @@ Name | Type | Description | Default
                 /** @type {Array<Node>} */
                 _projectsNodes: null,
 
-                /** @type {Function} */
-                _projectTemplateFn: null,
+                /**
+                 * Template for hidden projects
+                 * @type {Function}
+                 */
+                _hiddenProjectTemplateFn: null,
+
+                /**
+                 * Template for visible projects
+                 * @type {Function}
+                 */
+                _visibleProjectTemplateFn: null,
 
                 /** @type {Object} */
                 _highlightJob: null,
@@ -504,16 +513,22 @@ Name | Type | Description | Default
 
 
                 /**
-                 * Compile project HTML using template
+                 * Compile hidden project HTML using template
                  * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
                  * @return {String} valid raw HTML
                  */
-                _ioGetProjectHTML: function (project) {
-                    /**
-                    * Creates new object because we don`t know which properties from original project object
-                     * will be used in project item custom template, so we need them all.
-                     */
-                    return this._projectTemplateFn(project);
+                _ioGetHiddenProjectHTML: function (project) {
+                    return this._hiddenProjectTemplateFn(project);
+                },
+
+
+                /**
+                 * Compile visible project HTML using template
+                 * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @return {String} valid raw HTML
+                 */
+                _ioGetVisibleProjectHTML: function (project) {
+                    return this._visibleProjectTemplateFn(project);
                 },
 
                 /**
@@ -576,19 +591,25 @@ Name | Type | Description | Default
                         projectTemplate = '<div class="project-item__template" is-name>${name}</div>';
                     }
 
-                    this._projectTemplateFn = _.template([
+                    var hiddenProjectTemplate = [
                         '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" event-role="select">',
                             '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
-
-                                // todo: optimise me for IE please
-                                '<div class="' + Classes.PROJECT_ORDER + '">',
-                                    '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-up" data-id="${id}" title="Move project up">▲</span>',
-                                    '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-down" data-id="${id}" title="Move project down">▼</span>',
-                                '</div>',
+                                /* order controls will be */
                             '</div>',
                         '</li>'
-                    ].join(''));
+                    ];
+                    var visibleProjectTemplate = hiddenProjectTemplate.slice();
+                    visibleProjectTemplate.splice(
+                        hiddenProjectTemplate.indexOf(projectTemplate) + 1, 0,
+                        '<div class="' + Classes.PROJECT_ORDER + '">',
+                            '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-up" data-id="${id}" title="Move project up">▲</span>',
+                            '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-down" data-id="${id}" title="Move project down">▼</span>',
+                        '</div>'
+                    )
+
+                    this._hiddenProjectTemplateFn = _.template(hiddenProjectTemplate.join(''));
+                    this._visibleProjectTemplateFn = _.template(visibleProjectTemplate.join(''));
                 },
 
                 _initSelectedProjects: function () {

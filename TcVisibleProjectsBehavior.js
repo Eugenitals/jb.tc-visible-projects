@@ -197,7 +197,7 @@
          * @return {Array<String>}
          */
         _getProjectNodes: function (project) {
-            var html = [ this._ioGetProjectHTML(project) ];
+            var html = [ this._ioGetHiddenProjectHTML(project) ];
 
             if (project._children.length) {
                 var self = this;
@@ -215,7 +215,7 @@
             var _project;
             for (var i = 0, len = projects.length; i < len; i++) {
                 _project = projects[i];
-                html.push(this._ioGetProjectHTML(_project));
+                html.push(this._ioGetVisibleProjectHTML(_project));
 
                 if (_project._children.length) {
                     html.push.apply(html, this._getSelectedProjectNodes(_project._children))
