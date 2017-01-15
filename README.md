@@ -13,8 +13,8 @@ bower install
 polymer server
 ```
 
-Docs (don`t works in IE9): [http://localhost:8080/components/tc-visible-projects/](http://localhost:8080/components/tc-visible-projects/)  
 Demo: [http://localhost:8080/components/tc-visible-projects/demo/](http://localhost:8080/components/tc-visible-projects/demo/)
+Docs (don`t works in IE9): [http://localhost:8080/components/tc-visible-projects/](http://localhost:8080/components/tc-visible-projects/)  
 
 ## How to run Tests
 
