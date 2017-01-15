@@ -350,6 +350,7 @@
             if (this._projectsTree) {
                 this._parseSelectedProjects();
                 this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedTree.root).slice(1)/* Omit root project */);
+                this._ioApplyCurrentFilter(true);
             }
         },
 
@@ -466,7 +467,6 @@
             this._currentFilteredProjects = this._projectsTree.index();
             this._ioRenderHiddenProjects(this._getProjectNodes(this._projectsTree.root).slice(1)/* Omit root project */);
             this._setSelectedProjects(this._selectedProjects);
-            this._ioApplyCurrentFilter();
         },
 
         /**

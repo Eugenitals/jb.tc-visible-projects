@@ -361,9 +361,19 @@ Name | Type | Description | Default
             };
 
             Polymer({
+                /**
+                 * Save current selected projects into LocalStorage
+                 */
                 commit: function () {
                     this.$.selectedProjectsStore.value = this._getSelectedProjects();
                     this.$.selectedProjectsStore.save();
+                },
+
+                /**
+                 * Reload selected projects from LocalStorage
+                 */
+                reset: function () {
+                    this._initSelectedProjects();
                 },
 
                 is: 'tc-visible-projects',

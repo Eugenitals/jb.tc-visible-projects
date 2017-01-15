@@ -64,20 +64,22 @@
                     text-align: right;
                 }
 
-                paper-button {
-                    text-align: center;
-                    width: 150px;
+                #okBtn {
+                    background-color: #5889a6;
+                    color: #fff;
+                    width: 130px;
                 }
-                paper-button[button-ok] {
-                    color: #5889a6;
+
+                #resetBtn {
+                    width: 100px;
                 }
             </style>
 
             <!--[if IE]>
             <style is="custom-style">
                 paper-button {
+                    text-align: center;
                     display: inline-block;
-                    width: 150px;
                 }
             </style>
             <![endif]-->
@@ -94,15 +96,21 @@
 
             </tc-visible-projects>
             <div id="tools">
-                <paper-button id="okBtn" button-ok>Save Changes</paper-button>
+                <paper-button id="resetBtn">Reset</paper-button>
+                <paper-button id="okBtn" raised>Save Changes</paper-button>
             </div>
 
             <script>
                 var widget = document.querySelector('tc-visible-projects');
+                var resetBtn = document.querySelector('#resetBtn');
                 var okButton = document.querySelector('#okBtn');
 
                 okButton.addEventListener('click', function () {
                     widget.commit();
+                });
+
+                resetBtn.addEventListener('click', function () {
+                    widget.reset();
                 });
             </script>
         </template>
