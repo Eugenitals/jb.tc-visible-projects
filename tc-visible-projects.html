@@ -456,6 +456,11 @@ Name | Type | Description | Default
                     }, 1);
                 },
 
+                detached: function () {
+                    this._destructor();
+                    this._projectsNodes = null;
+                },
+
                 _ioSetLoading: function (isOn) {
                     this._isLoading = isOn;
                 },

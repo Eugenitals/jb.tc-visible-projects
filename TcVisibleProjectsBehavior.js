@@ -454,6 +454,10 @@
             return true;
         },
 
+        _destructor: function () {
+            ProjectsMap.clear();
+        },
+
         /**
          * @param result {{count: Number, href: String, project: Array}}
          */
