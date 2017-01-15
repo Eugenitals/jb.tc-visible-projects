@@ -283,6 +283,7 @@ Name | Type | Description | Default
 
                             <ul id="hiddenProjectsSelector" class="projects-container__selector" tabindex="0"
                                 on-keydown="_onHiddenProjectsSelectorKeydown"
+                                on-focus="_onHiddenProjectsSelectorFocus"
                                 on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
                             </ul>
@@ -699,7 +700,6 @@ Name | Type | Description | Default
                     var node;
 
                     if (! this._focusedNode) {
-                        this.$.hiddenProjectsSelector.focus();
                         node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
                     } else {
                         node = Polymer.dom(this._focusedNode).nextSibling;
@@ -727,7 +727,6 @@ Name | Type | Description | Default
                     var node;
 
                     if (! this._focusedNode) {
-                        this.$.hiddenProjectsSelector.focus();
                         node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
                     } else {
                         node = Polymer.dom(this._focusedNode).previousSibling;
@@ -818,11 +817,15 @@ Name | Type | Description | Default
                     if (info && info.role === 'select') {
                         this._setProjectSelected(info.target.getAttribute('data-id'), true);
                         this.async(function () {
-                            this.$.hiddenProjectsSelector.focus();
                             this._focusedNode = info.target;
-                            this._focusedNode.focus();
+                            this._focusNextProject();
                         }, 100);
                     }
+                },
+
+                _onHiddenProjectsSelectorFocus: function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
                 },
 
                 _onVisibleProjectTapDelegator: function (e) {
