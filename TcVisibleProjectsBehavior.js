@@ -319,7 +319,7 @@
         },
 
         /**
-         * Mark project (and all his visible children if needed) as selected
+         * Set project from list selected
          * @param project {Object}
          * @param projectsList {Array} list of IDs of all projects that will be selected
          * @param [ignoreChildren] {Boolean}
@@ -361,9 +361,13 @@
             this._selectedProjects._index[ _selectedProject.id ] = _selectedProject;
 
             // Select children
+            var _children;
             if (! ignoreChildren && project._children.length) {
                 for (var i = 0, len = project._children.length; i < len; i++) {
-                    this._addSelectedProject(project._children[i], projectsList);
+                    _children = project._children[i];
+                    if (projectsList.indexOf(_children.id) !== -1) {
+                        this._addSelectedProject(_children, projectsList);
+                    }
                 }
             }
 
