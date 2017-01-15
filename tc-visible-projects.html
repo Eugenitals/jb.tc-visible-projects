@@ -279,7 +279,6 @@ Name | Type | Description | Default
 
                             <ul id="hiddenProjectsSelector" class="projects-container__selector" tabindex="0"
                                 on-keydown="_onHiddenProjectsSelectorKeydown"
-                                on-focus="_onHiddenProjectsSelectorFocus"
                                 on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
                             </ul>
@@ -488,20 +487,22 @@ Name | Type | Description | Default
                 /**
                  * Compile hidden project HTML using template
                  * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @param level {Number}
                  * @return {String} valid raw HTML
                  */
-                _ioGetHiddenProjectHTML: function (project) {
-                    return this._hiddenProjectTemplateFn(project);
+                _ioGetHiddenProjectHTML: function (project, level) {
+                    return this._hiddenProjectTemplateFn(_.create(project, { _level: level }));
                 },
 
 
                 /**
                  * Compile visible project HTML using template
                  * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @param level {Number}
                  * @return {String} valid raw HTML
                  */
-                _ioGetVisibleProjectHTML: function (project) {
-                    return this._visibleProjectTemplateFn(project);
+                _ioGetVisibleProjectHTML: function (project, name, level) {
+                    return this._visibleProjectTemplateFn(_.create(project, { name: name, _level: level }));
                 },
 
                 /**
@@ -743,14 +744,6 @@ Name | Type | Description | Default
                     }
 
                     this._focusedNode = node;
-                    this._focusedNode.focus();
-                },
-
-                _onHiddenProjectsSelectorFocus: function (e) {
-                    if (! this._focusedNode && this._projectsNodes.length > 0) {
-                        this._focusedNode = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
-                    }
-
                     this._focusedNode.focus();
                 },
 

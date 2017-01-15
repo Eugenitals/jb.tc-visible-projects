@@ -4,41 +4,94 @@
 
 "use strict";
 
-(function (Polymer, Ajax, _) {
+(function (Polymer, Ajax, _, Map) {
     var Errors = {
         COMMUNICATION_ERROR: _.template('Server "<%= url %>" returned status <%= status %>'),
         CAN_NOT_PARSE_RESPONSE: 'Error while parse response',
         PROJECT_NOT_FOUND: _.template('Project <%= id %> is not found')
     };
 
-    function cloneSimpleObject(obj) {
-        return JSON.parse(JSON.stringify(obj));
+    /**
+     * TreeNode class
+     * @param id {String}
+     * @param name {String}
+     * @param parent {TreeNode}
+     * @constructor
+     */
+    function TreeNode(id, name, parent) {
+        this.id = id;
+        this.name = name;
+        this.parent = parent;
+        this.children = [];
+        this.level = 0;
+        this.fullName = name;
+
+        if (parent) {
+            this.level = parent.level + 1;
+            this.fullName = parent.fullName + '::' + name.toLowerCase();
+        }
+    }
+    TreeNode.prototype.valueOf = TreeNode.prototype.toString = function () {
+        return this.id;
     }
 
     /**
-     * Return topologically sorted list of projects IDs
-     * @param projects {Array<Object>}
-     * @param [acl] {Object} map of available projects
+     * Tree class
+     * @param root {TreeNode}
+     * @constructor
+     */
+    function Tree(root) {
+        this.root = root;
+        this._index = {};
+        this._index[ root.id ] = root;
+    }
+    Tree.prototype.add = function (node) {
+        var parent = node.parent || this.root;
+        parent.children.push(node);
+        this._index[ node.id ] = node;
+        return node;
+    };
+    Tree.prototype.remove = function (nodeId) {
+        var node = this._index[ nodeId ];
+        var parent = node.parent;
+        parent.children.splice(parent.children.indexOf(node), 1);
+        delete this._index[ nodeId ];
+        return node;
+    };
+    Tree.prototype.get = function (nodeId) {
+        return this._index[ nodeId ];
+    }
+    Tree.prototype.index = function () {
+        return this._index;
+    }
+
+    /**
+     * Return topologically sorted list of nodes IDs
+     * @param node {TreeNode}
+     * @param [acl] {Object} map of available nodes
      * @return {Array<String>}
      */
-    function getProjectsFlatIds(projects, acl) {
+    Tree.nodeToArray = function (node, acl) {
         var result = [];
 
-        if (projects.length) {
-            projects.forEach(function (_project) {
-                if (acl) {
-                    if (acl[ _project.id ]) {
-                        result.push(_project.id);
-                    }
-                } else {
-                    result.push(_project.id);
-                }
-                result.push.apply(result, getProjectsFlatIds(_project._children, acl));
-            });
+        if (acl) {
+            if (acl[ node.id ]) {
+                result.push(node.id);
+            }
+        } else {
+            result.push(node.id);
+        }
+
+        if (node.children.length) {
+            for (var i = 0, len = node.children.length; i < len; i++) {
+                result.push.apply(result, Tree.nodeToArray(node.children[i], acl));
+            }
         }
 
         return result;
     }
+    
+    var ProjectsMap = new Map();
 
     Polymer.jb = Polymer.jb || {};
 
@@ -80,50 +133,48 @@
 
         /**
          * Move selected project down (or up) inside its parent
-         * @param selectedProjectId {String}
+         * @param projectId {String}
          * @param [isReverse] {Boolean} true to move project up
          */
-        shiftProject: function (selectedProjectId, isReverse) {
-            var selectedProject = this._selectedProjects._index[ selectedProjectId ];
-            if (! selectedProject) {
+        shiftProject: function (projectId, isReverse) {
+            var node = this._selectedTree.get(projectId);
+            if (! node) {
                 return;
             }
-            var selectedProjectParent = this._getSelectedProjectParent(selectedProject);
-            var array;
-            if (selectedProjectParent) {
-                array = selectedProjectParent._children;
-            } else {
-                array = this._selectedProjects;
-            }
-            var index = array.indexOf(selectedProject);
+
+            var children = node.parent.children;
+            var index = children.indexOf(node);
 
             // Shift DOWN
             if (isReverse) {
                 if (index < 1) {
                     return;
                 } else {
-                    var temp = array[index - 1];
-                    array[index - 1] = array[index];
-                    array[index] = temp;
+                    var temp = children[index - 1];
+                    children[index - 1] = children[index];
+                    children[index] = temp;
                     this._setSelectedProjects(this._getSelectedProjects());
                 }
             }
 
             // Shift Up
             else {
-                if (index === array.length - 1) {
+                if (index === children.length - 1) {
                     return;
                 } else {
-                    var temp = array[index + 1];
-                    array[index + 1] = array[index];
-                    array[index] = temp;
+                    var temp = children[index + 1];
+                    children[index + 1] = children[index];
+                    children[index] = temp;
                     this._setSelectedProjects(this._getSelectedProjects());
                 }
             }
         },
 
-        /** @type {Array} */
-        _projects: null,
+        /** @type {Tree} */
+        _projectsTree: null,
+
+        /** @type {Tree} */
+        _selectedTree: null,
 
         /** @type {Object} */
         _rootProject: null,
@@ -131,55 +182,42 @@
         /** @type {Object} */
         _currentFilteredProjects: null,
 
-        /** @type {Array} */
+        /** @type {Array<String>} */
         _selectedProjects: null,
 
         /**
          * @param rawProjects {Array<{ id:String, parentProjectId:String, name:String }>}
-         * @return {Array}
+         * @return {Tree}
          */
-        _parseProjects: function (rawProjects) {
-            var result = [];
-            result._index = {};
+        _getProjectsTree: function (rawProjects) {
+            this._rootProject = rawProjects[0];
+            ProjectsMap.set(this._rootProject.id, this._rootProject);
+            var tree = new Tree(new TreeNode(this._rootProject.id, '', null));
 
-            // Handle Root project
-            var _project = rawProjects[0];
-            _project._level = 0;
-            _project._fullName = '';
-            _project._children = [];
-            result.push(_project);
-            result._index[ _project.id ] = _project;
-
-            // Save root project ID
-            this._rootProject = _project;
-
-            var _parent;
+            var _project, _parentProject, _node, _parentNode;
             for (var i = 1/* Omit root project */, len = rawProjects.length; i < len; i++ ) {
                 _project = rawProjects[i];
-                _parent = result._index[ _project.parentProjectId ];
-
-                _project._children = [];
-                _project._level = _parent._level + 1;
-                _project._fullName = _parent._fullName + '::' + _project.name.toLowerCase();
-                result._index[ _project.id ] = _project;
-
-                _parent._children.push(_project);
+                _parentProject = ProjectsMap.get(_project.parentProjectId);
+                _parentNode = tree.get(_parentProject.id);
+                tree.add(new TreeNode(_project.id, _project.name, _parentNode));
+                ProjectsMap.set(_project.id, _project);
             }
 
-            return result;
+            return tree;
         },
 
+        /**
+         * @return {Tree}
+         */
         _parseSelectedProjects: function () {
             var deletedProjects = {};
             var projectIds = this._selectedProjects;
-
-            this._selectedProjects = [];
-            this._selectedProjects._index = {};
+            this._selectedTree = new Tree(new TreeNode(this._rootProject.id, '', null));
 
             if (projectIds.length) {
                 var _project;
                 for (var i = 0, len = projectIds.length; i < len; i++) {
-                    _project = this._projects._index[ projectIds[i] ];
+                    _project = ProjectsMap.get(projectIds[i]);
 
                     // Project may be already deleted
                     if (! _project) {
@@ -187,39 +225,40 @@
                         continue;
                     }
 
-                    this._addSelectedProject(_project, projectIds, true);
+                    this._addSelectedProject(_project, projectIds);
                 }
             }
         },
 
         /**
-         * @param project {Object}
+         * @param node {TreeNode}
          * @return {Array<String>}
          */
-        _getProjectNodes: function (project) {
-            var html = [ this._ioGetHiddenProjectHTML(project) ];
+        _getProjectNodes: function (node) {
+            var html = [ this._ioGetHiddenProjectHTML(ProjectsMap.get(node.id), node.level) ];
 
-            if (project._children.length) {
+            if (node.children.length) {
                 var self = this;
-                project._children.forEach(function (_project) {
-                    html.push.apply(html, self._getProjectNodes(_project));
+                node.children.forEach(function (_node) {
+                    html.push.apply(html, self._getProjectNodes(_node));
                 })
             }
 
             return html;
         },
 
-        _getSelectedProjectNodes: function (projects) {
-            var html = [];
+        /**
+         * @param node {TreeNode}
+         * @return {Array<String>}
+         */
+        _getSelectedProjectNodes: function (node) {
+            var html = [ this._ioGetVisibleProjectHTML(ProjectsMap.get(node.id), node.name, node.level) ];
 
-            var _project;
-            for (var i = 0, len = projects.length; i < len; i++) {
-                _project = projects[i];
-                html.push(this._ioGetVisibleProjectHTML(_project));
-
-                if (_project._children.length) {
-                    html.push.apply(html, this._getSelectedProjectNodes(_project._children))
-                }
+            if (node.children.length) {
+                var self = this;
+                node.children.forEach(function (_node) {
+                    html.push.apply(html, self._getSelectedProjectNodes(_node));
+                })
             }
 
             return html;
@@ -232,7 +271,7 @@
          * @return {Object} map of visible projects
          */
         _getFilteredProject: function (filter, isProgressive) {
-            if (! this._projects || ! this._projects.length) {
+            if (! this._projectsTree) {
                 return {};
             }
 
@@ -244,57 +283,57 @@
                 : null
 
             return this._currentFilteredProjects
-                = this._filterProject(this._rootProject, filter, preFiltered, this._selectedProjects._index, allowed);
+                = this._filterProject(this._projectsTree.root, filter, preFiltered, this._selectedTree.index(), allowed);
         },
 
         /**
          * Recursively search projects by filter
-         * @param project {Object} current project
+         * @param node {TreeNode} project node
          * @param filter {String} current filter
          * @param filteredMap {Object} map of already matched projects
          * @param excludedMap {Object} map of projects excluded from filtration
          * @param [allowedMap] {Object} map of projects available for filtration
          * @return {Object} extended filteredMap
          */
-        _filterProject: function (project, filter, filteredMap, excludedMap, allowedMap) {
+        _filterProject: function (node, filter, filteredMap, excludedMap, allowedMap) {
             excludedMap = excludedMap || {};
             var match = false;
 
             // If no allowed
-            if (allowedMap && ! allowedMap[ project.id ]) {
+            if (allowedMap && ! allowedMap[ node.id ]) {
                 return filteredMap;
             }
 
-            if (! excludedMap[ project.id ]) {
+            if (! excludedMap[ node.id ]) {
                 if (! filter) {
                     match = true;
                 } else {
                     var filterParts = filter.split(' ');
                     var regexp = new RegExp('(' + filterParts.map(_.escapeRegExp).join(').+(') + ')', 'i');
 
-                    if (regexp.test(project._fullName)) {
+                    if (regexp.test(node.fullName)) {
                         match = true;
                     }
                 }
 
                 if (match) {
                     // Display all parents
-                    var _parent = this._projects._index[ project.parentProjectId ];
-                    while (_parent && !filteredMap[_parent.id]) {
-                        filteredMap[ _parent.id ] = true;
-                        _parent = this._projects._index[ _parent.parentProjectId ];
+                    var _parentNode = node.parent;
+                    while (_parentNode && !filteredMap[_parentNode.id]) {
+                        filteredMap[ _parentNode.id ] = true;
+                        _parentNode = _parentNode.parent;
                     }
-                    _parent = null;
+                    _parentNode = null;
 
                     // Display current project
-                    filteredMap[ project.id ] = true;
+                    filteredMap[ node.id ] = true;
                 }
             }
 
             // Iterate children
-            if (project._children.length) {
-                for (var i = 0, len = project._children.length; i < len; i++) {
-                    this._filterProject(project._children[i], match ? null : filter, filteredMap, excludedMap, allowedMap);
+            if (node.children.length) {
+                for (var i = 0, len = node.children.length; i < len; i++) {
+                    this._filterProject(node.children[i], match ? null : filter, filteredMap, excludedMap, allowedMap);
                 }
             }
 
@@ -303,134 +342,98 @@
 
         /**
          * Init selection projects
-         * @param selected {[{name:String, id:String}]}
+         * @param selected {Array<String>}
          */
         _setSelectedProjects: function (selected) {
             this._selectedProjects = selected || [];
 
-            if (this._projects) {
+            if (this._projectsTree) {
                 this._parseSelectedProjects();
-                this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedProjects));
+                this._ioRenderVisibleProjects(this._getSelectedProjectNodes(this._selectedTree.root).slice(1)/* Omit root project */);
             }
         },
 
         _getSelectedProjects: function () {
-            return getProjectsFlatIds(this._selectedProjects, this._selectedProjects._index);
+            return Tree.nodeToArray(this._selectedTree.root, this._selectedTree.index());
         },
 
         /**
          * Set project from list selected
          * @param project {Object}
          * @param projectsList {Array} list of IDs of all projects that will be selected
-         * @param [ignoreChildren] {Boolean}
-         * @return {Object} selectedProject
+         * @return {TreeNode} selected project node
          */
-        _addSelectedProject: function (project, projectsList, ignoreChildren) {
-            if (this._selectedProjects._index[ project.id ]) {
-                return this._selectedProjects._index[ project.id ];
+        _addSelectedProject: function (project, projectsList) {
+            if (this._selectedTree.get(project.id)) {
+                return this._selectedTree.get(project.id);
             }
 
-            var _selectedProject = cloneSimpleObject(project);
-            _selectedProject._children = [];
-            var _parent = this._projects._index [ project.parentProjectId ];
-            var _selectedParent;
-
-            while (_parent) {
-                if (projectsList.indexOf(_parent.id) !== -1) {
-                    // Add parent before child
-                    _selectedParent
-                        = this._addSelectedProject(this._projects._index[ _parent.id ], projectsList, ignoreChildren);
+            var parentProject = ProjectsMap.get(project.parentProjectId);
+            var nodeName = project.name;
+            var parentNode;
+            while (parentProject) {
+                if (projectsList.indexOf(parentProject.id) !== -1) {
+                    // Add parent node before child
+                    parentNode = this._addSelectedProject(ProjectsMap.get(parentProject.id), projectsList);
                     break;
                 }
-                else if (_parent !== this._rootProject) {
-                    // Extend child name
-                    _selectedProject.name = _parent.name + ' → ' + _selectedProject.name;
+                else if (parentProject !== this._rootProject) {
+                    // Extend node name
+                    nodeName = parentProject.name + ' → ' + nodeName;
+                } else {
+                    parentNode = this._selectedTree.root;
+                    break;
                 }
-                _parent = this._projects._index[ _parent.parentProjectId ];
+                parentProject = ProjectsMap.get(parentProject.parentProjectId);
             }
 
-            if (_selectedParent) {
-                _selectedProject._level = _selectedParent._level + 1;
-                _selectedParent._children.push(_selectedProject);
-            } else {
-                _selectedProject._level = 1;
-                this._selectedProjects.push(_selectedProject);
-            }
-
-            // Add to index
-            this._selectedProjects._index[ _selectedProject.id ] = _selectedProject;
-
-            // Select children
-            var _children;
-            if (! ignoreChildren && project._children.length) {
-                for (var i = 0, len = project._children.length; i < len; i++) {
-                    _children = project._children[i];
-                    if (projectsList.indexOf(_children.id) !== -1) {
-                        this._addSelectedProject(_children, projectsList);
-                    }
-                }
-            }
-
-            return _selectedProject;
+            // Add Node
+            return this._selectedTree.add(new TreeNode(project.id, nodeName, parentNode));
         },
 
         /**
-         * @param selectedProject {Object}
+         * @param node {TreeNode}
          * @param [ignoreParent] {Boolean}
          */
-        _removeSelectedProject: function (selectedProject, ignoreParent) {
-            // Unselect all children
-            if (selectedProject._children.length) {
-                var _children = selectedProject._children.slice();
+        _removeSelectedProject: function (node, ignoreParent) {
+            if (node === this._selectedTree.root) {
+                return;
+            }
+
+            // Un-select all children
+            if (node.children.length) {
+                var _children = node.children.slice();
                 for (var i = 0, len = _children.length; i < len; i++) {
                     this._removeSelectedProject(_children[i], true);
                 }
             }
 
-            // Get selected parent
-            var parent = this._projects._index[ selectedProject.parentProjectId ];
-            var selectedParent;
-            while (parent) {
-                if (this._selectedProjects._index[ parent.id ]) {
-                    selectedParent = this._selectedProjects._index[ parent.id ];
-                    break;
-                }
-                parent = this._projects._index[ parent.parentProjectId ];
+            var parentNode = node.parent;
+            this._selectedTree.remove(node.id);
+
+            // Remove parent
+            if (!ignoreParent && !parentNode.children.length) {
+                this._removeSelectedProject(parentNode);
             }
-
-            if (selectedParent) {
-                selectedParent._children.splice(selectedParent._children.indexOf(selectedProject), 1);
-
-                // Remove parent
-                if (!ignoreParent && ! selectedParent._children.length) {
-                    this._removeSelectedProject(selectedParent);
-                }
-            } else {
-                this._selectedProjects.splice(this._selectedProjects.indexOf(selectedProject), 1);
-            }
-
-            // Delete index
-            delete this._selectedProjects._index[ selectedProject.id ];
         },
 
         _selectProject: function (projectId) {
-            var project = this._projects._index[ projectId ];
-
-            if (! project) {
+            var node = this._projectsTree.get(projectId);
+            if (! node) {
                 return;
             }
 
             // Check for selection availability
-            if (! this._currentFilteredProjects[ project.id ]) {
+            if (! this._currentFilteredProjects[ node.id ]) {
                 return false;
             }
 
-            // Select each available children
-            var projectsIds = getProjectsFlatIds([ project ], this._currentFilteredProjects);
-            var _projectId = [];
-            for (var  i = 0, len = projectsIds.length; i <len; i++) {
-                _projectId = projectsIds[i];
-                this._addSelectedProject(this._projects._index[ _projectId ], projectsIds);
+            // Select children
+            var projectsIds =  Tree.nodeToArray(node, this._currentFilteredProjects);
+
+            // Handle selection
+            for (var i = 0, len = projectsIds.length; i <len; i++) {
+                this._addSelectedProject(ProjectsMap.get(projectsIds[i]), projectsIds);
             }
 
             // Update selected projects
@@ -440,41 +443,24 @@
         },
 
         _unselectProject: function (projectId) {
-            var selectedProject = this._selectedProjects._index[ projectId ];
-
-            if (! selectedProject) {
-                return false;
+            var node = this._selectedTree.get(projectId);
+            if (! node) {
+                return;
             }
 
-            this._removeSelectedProject(selectedProject);
+            this._removeSelectedProject(node);
             this._setSelectedProjects(this._getSelectedProjects());
             this._ioApplyCurrentFilter(true);
             return true;
         },
 
-        _getSelectedProjectParent: function (selectedProject) {
-            var parent = this._projects._index[selectedProject.parentProjectId];
-
-            if (!parent) {
-                return null;
-            }
-
-            while (parent) {
-                if (this._selectedProjects._index[parent.id]) {
-                    return this._selectedProjects._index[parent.id];
-                }
-                parent = this._projects._index[parent.parentProjectId];
-            }
-        },
-
-
         /**
          * @param result {{count: Number, href: String, project: Array}}
          */
         _onProjectsLoaded: function (projects) {
-            this._projects = this._parseProjects(projects);
-            this._currentFilteredProjects = this._projects._index;
-            this._ioRenderHiddenProjects(this._getProjectNodes(this._rootProject).slice(1)/* Omit root project */);
+            this._projectsTree = this._getProjectsTree(projects);
+            this._currentFilteredProjects = this._projectsTree.index();
+            this._ioRenderHiddenProjects(this._getProjectNodes(this._projectsTree.root).slice(1)/* Omit root project */);
             this._setSelectedProjects(this._selectedProjects);
             this._ioApplyCurrentFilter();
         },
@@ -486,4 +472,4 @@
             this._ioFireError(error.message, 'LOAD_PROJECTS_ERROR');
         }
     };
-})(window.Polymer || {}, window.Ajax, window._);
+})(window.Polymer || {}, window.Ajax, window._, window.Map);
