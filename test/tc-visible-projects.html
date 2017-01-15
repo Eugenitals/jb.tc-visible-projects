@@ -1,7 +1,7 @@
 <!doctype html>
 
 <html>
-  <head>
+<head>
     <title>tc-visible-projects test</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
@@ -10,24 +10,24 @@
     <script src="../../iron-test-helpers/mock-interactions.js"></script>
 
     <link rel="import" href="../tc-visible-projects.html">
-  </head>
-  <body>
+</head>
+<body>
 
-    <test-fixture id="tcVisibleProjects">
-      <template>
+<test-fixture id="tcVisibleProjects">
+    <template>
         <tc-visible-projects></tc-visible-projects>
-      </template>
-    </test-fixture>
+    </template>
+</test-fixture>
 
-    <script>
-      suite('<tc-visible-projects>', function() {
+<script>
+    suite('<tc-visible-projects>', function () {
 
-        test('has correct "is" attribute ', function() {
-          var element = fixture('tcVisibleProjects');
-          assert.equal(element.is, 'tc-visible-projects');
+        test('has correct "is" attribute', function () {
+            var element = fixture('tcVisibleProjects');
+            assert.equal(element.is, 'tc-visible-projects');
         });
 
-      });
-    </script>
-  </body>
+    });
+</script>
+</body>
 </html>
