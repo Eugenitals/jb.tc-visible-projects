@@ -106,6 +106,10 @@ Name | Type | Description | Default
                 background-color: var(--tc-project-selector-highlight-color);
             }
 
+            .hidden {
+                display: none;
+            }
+
             .projects-container {
                 width: 50%;
                 border-left: 1px solid rgba(0,0,0,.12);
@@ -331,35 +335,6 @@ Name | Type | Description | Default
                 return null;
             }
 
-            /**
-             * Applies current filter if it was changed
-             * @param [forced] {Boolean} true - to skip filter dirty checking
-             */
-            function ioApplyCurrentFilter (forced) {
-                // Prevent highlight progress
-                this.cancelAsync(this._highlightJob);
-
-                var filter = this._ioGetFilter();
-                var isFilterChanged = filter !== this._lastFilterValue;
-
-                // Coz we use "keyup" event we should ensure that our filter is changed
-                if (!forced && !isFilterChanged) {
-                    return;
-                }
-
-                var isProgressive = forced ? false : filter.indexOf(this._lastFilterValue) === 0;
-                this._lastFilterValue = filter;
-
-                var ts = (new Date()).getTime();
-                this._filterProjectsNodes(filter, isProgressive);
-                log('Filtration time: ', (new Date()).getTime() - ts);
-
-                // Reset scroll if filter was changed
-                if (isFilterChanged) {
-                    this.$.hiddenProjectsBody.scrollTop = 0;
-                }
-            };
-
             Polymer({
                 /**
                  * Save current selected projects into LocalStorage
@@ -390,8 +365,7 @@ Name | Type | Description | Default
                      */
                     delay: {
                         type: Number,
-                        value: 100,
-                        observer: '_delayChanged'
+                        value: 100
                     },
 
                     /**
@@ -545,17 +519,32 @@ Name | Type | Description | Default
                     node.style.display = '';
                 },
 
-                _ioApplyCurrentFilter: ioApplyCurrentFilter,
-
                 /**
-                 * Debounce filter application
-                 * @param delay {Number}
+                 * Applies current filter if it was changed
+                 * @param [forced] {Boolean} true - to skip filter dirty checking
                  */
-                _delayChanged: function (delay) {
-                    if (delay < 1) {
-                        this._ioApplyCurrentFilter = ioApplyCurrentFilter;
-                    } else {
-                        this._ioApplyCurrentFilter = _.debounce(ioApplyCurrentFilter, delay);
+                _ioApplyCurrentFilter: function (forced) {
+                    // Prevent highlight progress
+                    this.cancelAsync(this._highlightJob);
+
+                    var filter = this._ioGetFilter();
+                    var isFilterChanged = filter !== this._lastFilterValue;
+
+                    // Coz we use "keyup" event we should ensure that our filter is changed
+                    if (!forced && !isFilterChanged) {
+                        return;
+                    }
+
+                    var isProgressive = forced ? false : filter.indexOf(this._lastFilterValue) === 0;
+                    this._lastFilterValue = filter;
+
+                    var ts = (new Date()).getTime();
+                    this._filterProjectsNodes(filter, isProgressive);
+                    log('Filtration time: ', (new Date()).getTime() - ts);
+
+                    // Reset scroll if filter was changed
+                    if (isFilterChanged) {
+                        this.$.hiddenProjectsBody.scrollTop = 0;
                     }
                 },
 
@@ -803,7 +792,9 @@ Name | Type | Description | Default
                             this._focusPrevProject();
                             break;
                         default:
-                            this._ioApplyCurrentFilter();
+                            this.debounce('applyFilterOnInput', function () {
+                                this._ioApplyCurrentFilter();
+                            }, this.delay);
                     }
 
                     /* IE Placeholder show/hide */
