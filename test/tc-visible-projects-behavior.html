@@ -7,19 +7,264 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
     <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
-
-    <link rel="import" href="../tc-visible-projects.html">
+    <script src="../../lodash/lodash.min.js"></script>
+    <script src="../libs/ajax.js"></script>
+    <script src="../TcVisibleProjectsBehavior.js"></script>
 </head>
 <body>
 
-<test-fixture id="tcVisibleProjects">
-    <template>
-        <tc-visible-projects></tc-visible-projects>
-    </template>
-</test-fixture>
-
 <script>
     suite('Polymer.jb.TcVisibleProjectsBehavior', function () {
+        var emptyFn = function () {};
+        var Selector;
+
+        suiteSetup(function (done) {
+            // Init behavior without widget
+            Selector = _.create(Polymer.jb.TcVisibleProjectsBehavior, {
+                _ioSetLoading: emptyFn,
+                _ioGetHiddenProjectHTML: emptyFn,
+                _ioGetVisibleProjectHTML: emptyFn,
+                _ioRenderVisibleProjects: emptyFn,
+                _ioRenderHiddenProjects: emptyFn,
+                _ioApplyCurrentFilter: emptyFn,
+                _ioFireError: emptyFn
+            });
+
+            done();
+        });
+
+        test('create global object', function (done) {
+            assert.isDefined(_.get(window, 'Polymer.jb.TcVisibleProjectsBehavior'));
+            done();
+        });
+
+        test('load projects from url', function (done) {
+            var originalFn = Selector._onProjectsLoaded;
+
+            var stub = sinon.stub(Selector, '_onProjectsLoaded', function () {
+                originalFn.apply(this, arguments);
+                stub.restore();
+                done();
+            });
+            Selector._loadProjects('projects.json');
+        });
+
+        test('fire error if loading failed', function (done) {
+            var stub = sinon.stub(Selector, '_ioFireError', function () {
+                stub.restore();
+                done();
+            });
+            Selector._loadProjects('foo.js');
+        });
+
+        test('turn loader "on" and "off" while loading', function (done) {
+            var stub = sinon.stub(Selector, '_ioSetLoading', function (isOn) {
+                if (stub.callCount === 1) {
+                    assert.isTrue(isOn);
+                } else {
+                    assert.isFalse(isOn);
+                    stub.restore();
+                    done();
+                }
+            });
+            Selector._loadProjects('bar.js');
+        });
+
+        test('make tree from list of projects', function (done) {
+            // Check root
+            var tree = Selector._projectsTree;
+            assert.isDefined(tree.root);
+            assert.equal(tree.root.name, '');
+            assert.equal(tree.root.fullName, '');
+            assert.equal(tree.root.level, 0);
+            assert.equal(tree.root.children.length, 40);
+
+            // Check one child
+            var child = tree.root.children[10];
+            assert.equal(child.level, 1);
+            assert.equal(child.children.length, 1);
+
+            // Check one subchild
+            var subChild = child.children[0];
+            assert.equal(subChild.level, 2);
+            assert.equal(subChild.fullName.indexOf(child.fullName), 0);
+
+            assert.equal(Object.keys(tree.index()).length, 667);
+            done();
+        });
+
+        test('make tree of selected projects from projects IDs list', function (done) {
+            Selector._setSelectedProjects(["NetCommunityProjects_Femah", "Kotlin", "Kotlin_102"]);
+
+            // Check root
+            var tree = Selector._selectedTree;
+            assert.isDefined(tree.root);
+            assert.equal(tree.root.name, '');
+            assert.equal(tree.root.fullName, '');
+            assert.equal(tree.root.level, 0);
+            assert.equal(tree.root.children.length, 2);
+
+            // Check one child
+            var child = tree.root.children[1];
+            assert.equal(child.level, 1);
+            assert.equal(child.children.length, 1);
+
+            done();
+        });
+
+        test('make tree of selected projects from list  with broken order and missing elements', function (done) {
+            // Only 4 real project here
+            Selector._setSelectedProjects(["foo", "NetCommunityProjects_Femah", "bar", "Kotlin_102", "omg", "Kotlin", "mushroom", "NetCommunityProjects"]);
+
+            // Why 5? Don`t forget about ROOT, which will be added to selection auto-magically
+            assert.equal(Object.keys(Selector._selectedTree.index()).length, 5);
+            done();
+        });
+
+        test('form list of html for each project', function (done) {
+            var stub = sinon.stub(Selector, '_ioGetHiddenProjectHTML', function () { return ''; });
+            var nodes = Selector._getProjectNodes(Selector._projectsTree.root);
+            assert.equal(nodes.length, 667);
+
+            stub.restore();
+            done();
+        });
+
+        test('form list of html for each selected project', function (done) {
+            Selector._setSelectedProjects(["NetCommunityProjects_Femah", "Kotlin", "Kotlin_102"]);
+
+            var stub = sinon.stub(Selector, '_ioGetVisibleProjectHTML', function () { return ''; });
+            var nodes = Selector._getSelectedProjectNodes(Selector._selectedTree.root);
+            assert.equal(nodes.length, 4); // Ofc don`t forget about root!
+
+            stub.restore();
+            done();
+        });
+
+        test('filtration respect selected projects', function (done) {
+            var stub = sinon.stub(Selector, '_filterProject', function (node, filter, filteredMap, excludedMap, allowedMap) {
+                assert.equal(excludedMap, excluded);
+
+                stub.restore();
+                done();
+            });
+
+            var excluded = Selector._selectedTree.index();
+            Selector._getFilteredProjects('');
+        });
+
+        test('filtration respect "progressive" flag', function (done) {
+            var stub = sinon.stub(Selector, '_filterProject', function (node, filter, filteredMap, excludedMap, allowedMap) {
+                assert.equal(allowedMap, allowed);
+
+                stub.restore();
+                done();
+            });
+
+            var allowed = Selector._currentFilteredProjects = {};
+            Selector._getFilteredProjects('', true);
+        });
+
+        test('render projects and forced apply filter after selected projects set', function (done) {
+            var stubRender = sinon.spy(Selector, '_ioRenderVisibleProjects');
+            var applyRender = sinon.stub(Selector, '_ioApplyCurrentFilter', function (isForced) {
+                assert.isTrue(isForced);
+            });
+            Selector._setSelectedProjects(["NetCommunityProjects_Femah", "Kotlin", "Kotlin_102"]);
+            stubRender.reset();
+            applyRender.reset();
+            done();
+        });
+
+        test('return selected projects as topologically sorted array of IDs', function (done) {
+            var sourceArr = ["_Root", "NetCommunityProjects_Femah", "Kotlin", "Kotlin_102"];
+            var wrongArr = ["NetCommunityProjects_Femah", "Kotlin_102", "Kotlin", "_Root"];
+
+            // Normal order
+            Selector._setSelectedProjects(sourceArr);
+            assert.equal(Selector._getSelectedProjects().join(), sourceArr.join());
+
+            // Wrong order
+            Selector._setSelectedProjects(wrongArr);
+            assert.equal(Selector._getSelectedProjects().join(), sourceArr.join());
+            done();
+        });
+        
+        test('project selection add all children', function (done) {
+            Selector._setSelectedProjects();
+            Selector._getFilteredProjects('');
+            Selector._selectProject("IntellijIdeaPlugins");
+            assert.equal(Object.keys(Selector._selectedTree.index()).length, 17);
+            done();
+        });
+
+        test('project selection respect filtration', function (done) {
+            Selector._setSelectedProjects();
+            Selector._getFilteredProjects('ascii');
+            Selector._selectProject("IntellijIdeaPlugins");
+            assert.equal(Object.keys(Selector._selectedTree.index()).length, 4);
+            done();
+        });
+
+        test('project un-selection removes all parent if it was last children', function (done) {
+            Selector._getFilteredProjects('');
+            Selector._setSelectedProjects([ "NetCommunityProjects_Femah" ]);
+            Selector._unselectProject("NetCommunityProjects_Femah");
+            assert.equal(Selector._getSelectedProjects().length, 1);
+            done();
+        });
+
+        suite('Down (and up) shifting', function () {
+            var selection = [
+                "_Root",
+                "NetProductsExtensions_Trunk",
+                "IdeaAwsCloudFormation",
+                "IdeaAwsCloudFormation_Idea_14_15",
+                "IdeaAwsCloudFormation_Master",
+                "NetCommunityProjects_Femah"
+            ];
+
+            suiteSetup(function (done) {
+                Selector._getFilteredProjects('');
+                done();
+            });
+
+            test('shifts project "down" inside parent', function (done) {
+                var shifted = [
+                    "_Root",
+                    "NetProductsExtensions_Trunk",
+                    "IdeaAwsCloudFormation",
+                    "IdeaAwsCloudFormation_Master",
+                    "IdeaAwsCloudFormation_Idea_14_15",
+                    "NetCommunityProjects_Femah"
+                ];
+
+                Selector._setSelectedProjects(selection);
+                Selector.shiftProject("IdeaAwsCloudFormation_Idea_14_15");
+                Selector.shiftProject("IdeaAwsCloudFormation_Idea_14_15");
+
+                assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+                done();
+            });
+
+            test('shifts project "up" inside parent', function (done) {
+                var shifted = [
+                    "_Root",
+                    "NetProductsExtensions_Trunk",
+                    "IdeaAwsCloudFormation",
+                    "IdeaAwsCloudFormation_Master",
+                    "IdeaAwsCloudFormation_Idea_14_15",
+                    "NetCommunityProjects_Femah"
+                ];
+
+                Selector._setSelectedProjects(selection);
+                Selector.shiftProject("IdeaAwsCloudFormation_Master", true);
+                Selector.shiftProject("IdeaAwsCloudFormation_Master", true);
+
+                assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+                done();
+            });
+        });
     });
 </script>
 </body>

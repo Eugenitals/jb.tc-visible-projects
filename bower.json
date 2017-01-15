@@ -1,9 +1,9 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.0",
   "name": "tc-visible-projects",
   "main": "tc-visible-projects.html",
   "description": "typical *.yandex-team.ru header",
-  "authors": "etaranov@yandex-team.ru",
+  "authors": "to.etaranov@gmail.com",
   "private": true,
   "ignore": [
     "**/.*",

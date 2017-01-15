@@ -4,6 +4,8 @@
 
 "use strict";
 
+window.Polymer = window.Polymer || {};
+
 (function (Polymer, Ajax, _, Map) {
     var Errors = {
         COMMUNICATION_ERROR: _.template('Server "<%= url %>" returned status <%= status %>'),
@@ -270,7 +272,7 @@
          * @param [isProgressive] {Boolean} true to filter through last filtered projects
          * @return {Object} map of visible projects
          */
-        _getFilteredProject: function (filter, isProgressive) {
+        _getFilteredProjects: function (filter, isProgressive) {
             if (! this._projectsTree) {
                 return {};
             }
@@ -282,8 +284,12 @@
                 ? this._currentFilteredProjects
                 : null
 
+            var excluded = this._selectedTree
+                ? this._selectedTree.index()
+                : {};
+
             return this._currentFilteredProjects
-                = this._filterProject(this._projectsTree.root, filter, preFiltered, this._selectedTree.index(), allowed);
+                = this._filterProject(this._projectsTree.root, filter, preFiltered, excluded, allowed);
         },
 
         /**
@@ -342,7 +348,7 @@
 
         /**
          * Init selection projects
-         * @param selected {Array<String>}
+         * @param [selected] {Array<String>}
          */
         _setSelectedProjects: function (selected) {
             this._selectedProjects = selected || [];
@@ -425,7 +431,7 @@
             }
 
             // Check for selection availability
-            if (! this._currentFilteredProjects[ node.id ]) {
+            if (this._currentFilteredProjects && ! this._currentFilteredProjects[ node.id ]) {
                 return false;
             }
 
@@ -476,4 +482,4 @@
             this._ioFireError(error.message, 'LOAD_PROJECTS_ERROR');
         }
     };
-})(window.Polymer || {}, window.Ajax, window._, window.Map);
+})(window.Polymer, window.Ajax, window._, window.Map);

@@ -1,0 +1,71 @@
+<!doctype html>
+
+<html>
+<head>
+    <title>tc-visible-projects test</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <script src="../../lodash/lodash.min.js"></script>
+    <script src="../libs/ajax.js"></script>
+    <script src="../TcVisibleProjectsBehavior.js"></script>
+</head>
+<body>
+
+<script>
+    /*********************************
+     * Better to add more cases here *
+     *********************************/
+
+    suite('Filtration stuff', function () {
+        var emptyFn = function () {};
+        var Selector;
+
+        suiteSetup(function (done) {
+
+            // Init behavior without widget
+            Selector = _.create(Polymer.jb.TcVisibleProjectsBehavior, {
+                _ioSetLoading: emptyFn,
+                _ioGetHiddenProjectHTML: emptyFn,
+                _ioGetVisibleProjectHTML: emptyFn,
+                _ioRenderVisibleProjects: emptyFn,
+                _ioRenderHiddenProjects: emptyFn,
+                _ioApplyCurrentFilter: emptyFn,
+                _ioFireError: emptyFn
+            });
+
+            var originalFn = Selector._onProjectsLoaded;
+            var stub = sinon.stub(Selector, '_onProjectsLoaded', function () {
+                originalFn.apply(this, arguments);
+                stub.restore();
+                done();
+            });
+
+            Selector._loadProjects('projects.json');
+        });
+
+        test('filter by "plug"', function (done) {
+            Selector._getFilteredProjects('plug');
+
+            assert.equal(Object.keys(Selector._currentFilteredProjects).length, 101);
+            done();
+        });
+
+        test('filter by "kotl 1."', function (done) {
+            Selector._getFilteredProjects('kotl 1.');
+
+            assert.equal(Object.keys(Selector._currentFilteredProjects).length, 13);
+            done();
+        });
+
+        test('filter by "kotl 1. 1"', function (done) {
+            Selector._getFilteredProjects('kotl 1. 1');
+
+            assert.equal(Object.keys(Selector._currentFilteredProjects).length, 4);
+            done();
+        });
+    });
+</script>
+</body>
+</html>

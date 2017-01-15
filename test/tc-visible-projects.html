@@ -19,13 +19,207 @@
     </template>
 </test-fixture>
 
+<test-fixture id="tcCustomVisibleProjects">
+    <template>
+        <tc-visible-projects>
+            <template name="group-template">
+                <div class="project-item__template">
+                    <span is-name>${name}</span>: <span>${description}</span>
+                </div>
+            </template>
+        </tc-visible-projects>
+    </template>
+</test-fixture>
+
 <script>
     suite('<tc-visible-projects>', function () {
+        var emptyFn = function () {};
+        var Selector;
 
-        test('has correct "is" attribute', function () {
-            var element = fixture('tcVisibleProjects');
-            assert.equal(element.is, 'tc-visible-projects');
+        setup(function() {
+            Selector = fixture('tcVisibleProjects');
         });
+
+        suite('Initialization', function () {
+            setup(function() {
+                stub('tc-visible-projects', {
+                    _initProjectTemplate: sinon.spy(),
+                    _initSelectedProjects: sinon.spy(),
+                    _loadProjects: sinon.spy()
+                });
+                Selector = fixture('tcVisibleProjects');
+            });
+
+            test('has correct "is" attribute', function () {
+                assert.equal(Selector.is, 'tc-visible-projects');
+            });
+
+            test('makes some initialization stuff on ready (fill selected projects, prepare templates, load data)', function (done) {
+                assert.isTrue(Selector._initProjectTemplate.calledOnce);
+                assert.isTrue(Selector._initSelectedProjects.calledOnce);
+                assert.isTrue(Selector._loadProjects.calledOnce);
+                assert.isDefined(Selector._projectsNodes);
+                done();
+            });
+        });
+
+        test('detached() destruct behavior on detached', function (done) {
+            var spy = sinon.stub(Selector, '_destructor')
+            Selector.detached(); // Pretty dirty
+            assert.isTrue(spy.calledOnce);
+            spy.reset();
+            done();
+        });
+
+        // Failed with Safari "The quota has been exceeded"
+        test.skip('_initSelectedProjects() loads selected project from LocalStorage', function (done) {
+            var storedValue = ['a', 'b', 'c'];
+            var stub = sinon.stub(Selector, '_setSelectedProjects', function (value) {
+                assert.equal(value.join(), storedValue.join());
+            })
+            localStorage.setItem('tc-visible-projects:selected-projects', JSON.stringify(storedValue));
+            Selector._initSelectedProjects();
+            stub.reset();
+            done();
+        });
+
+        suite('_initProjectTemplate()', function () {
+            test('_ioGetHiddenProjectHTML() returns hidden projects template', function (done) {
+                var selector = fixture('tcCustomVisibleProjects');
+                assert.equal(
+                    selector._ioGetHiddenProjectHTML({ id: 'ID', name: 'NAME', description: 'DESCRIPTION', level: 1 }).replace(/\s\s+/g, ' '),
+                    '<li class="project-item" data-id="ID" data-name="NAME" data-level="" event-role="select" tabindex="-1"><div class="project-level-"><div class="project-item__template"> <span is-name="">NAME</span>: <span>DESCRIPTION</span> </div></div></li>'
+                )
+                done();
+            });
+
+            test('tcCustomVisibleProjects() returns visible projects template', function (done) {
+                var selector = fixture('tcCustomVisibleProjects');
+                assert.equal(
+                    selector._ioGetVisibleProjectHTML({ id: 'ID', name: 'NAME', description: 'DESCRIPTION', level: 1 }).replace(/\s\s+/g, ' '),
+                    '<li class="project-item" data-id="ID" data-name="" data-level="" event-role="select" tabindex="-1"><div class="project-level-"><div class="project-item__template"> <span is-name=""></span>: <span>DESCRIPTION</span> </div><div class="project-item__order"><span class="project-item__order-arrow" event-role="index-up" data-id="ID" title="Move project up">▲</span><span class="project-item__order-arrow" event-role="index-down" data-id="ID" title="Move project down">▼</span></div></div></li>'
+                )
+                done();
+            });
+        });
+
+        test('_ioGetFilter() trims user input text', function (done) {
+            Selector.$.hiddenProjectsFilter.value = '   Hello filter!        ';
+
+            assert.equal(Selector._ioGetFilter(), 'Hello filter!');
+            done();
+        });
+
+        test('_ioFireError() fires "error" message', function (done) {
+            Selector.addEventListener('error', function (e) {
+                assert.equal(e.detail.message, 'Message');
+                assert.equal(e.detail.code, 'ERROR');
+                done();
+            });
+
+            Selector._ioFireError('Message', 'ERROR');
+        });
+
+        suite('Suite with real loading', function () {
+            setup(function(done) {
+                Selector = fixture('tcVisibleProjects');
+
+                var originalFn = Selector._onProjectsLoaded;
+                var stub = sinon.stub(Selector, '_onProjectsLoaded', function () {
+                    originalFn.apply(this, arguments);
+                    stub.restore();
+                    done();
+                });
+
+                Selector._loadProjects('projects.json');
+            });
+
+            test('_filterProjectsNodes()', function (done) {
+                var counter = 0;
+                Selector._filterProjectsNodes('Clojure-Kit');
+
+                for (var i = 0, len = Selector._projectsNodes.length; i < len; i++) {
+                    if (Selector._projectsNodes[i].style.display === '') {
+                        counter++;
+                    }
+                }
+
+                assert.equal(counter, 2);
+                done();
+            });
+
+            test('_getNextVisibleProject() returns next visible project node', function (done) {
+                Selector._filterProjectsNodes('');
+                Selector._ioHideProjectNode(Selector._projectsNodes[1]);
+                assert.equal(Selector._getNextVisibleProject(Selector._projectsNodes[0]), Selector._projectsNodes[2]);
+                done();
+            });
+
+            test('_getPrevVisibleProject() returns previous visible project node', function (done) {
+                Selector._filterProjectsNodes('');
+                var length = Selector._projectsNodes.length;
+                Selector._ioHideProjectNode(Selector._projectsNodes[ length - 2 ]);
+                assert.equal(Selector._getPrevVisibleProject(Selector._projectsNodes[ length - 1 ]), Selector._projectsNodes[ length - 3 ]);
+                done();
+            });
+
+            test('_onHiddenProjectTapDelegator() detects tap on project item', function (done) {
+                var stub = sinon.stub(Selector, '_setProjectSelected', function (id) {
+                    assert.equal(id, "NetCommunityProjects");
+                });
+                Selector._filterProjectsNodes('');
+                Selector._projectsNodes[0].click();
+
+                stub.restore();
+                done();
+            });
+
+            suite('_ioApplyCurrentFilter()', function () {
+                setup(function () {
+                    Selector.$.hiddenProjectsFilter.value = 'hello';
+                    Selector._ioApplyCurrentFilter();
+                });
+
+                test('Apply second time does nothing', function (done) {
+                    var stub = sinon.stub(Selector, '_filterProjectsNodes', function (filter, isProgressive) {
+                        done(new Error('Filter should not be changed'));
+                    });
+                    Selector._ioApplyCurrentFilter();
+                    stub.restore();
+
+                    done();
+                });
+
+                test('Сlarify filter makes it progressive', function (done) {
+                    Selector.$.hiddenProjectsFilter.value = 'hello world';
+                    var stub = sinon.stub(Selector, '_filterProjectsNodes', function (filter, isProgressive) {
+                        assert.isTrue(isProgressive);
+                    });
+                    Selector._ioApplyCurrentFilter();
+                    stub.restore();
+
+                    done();
+                });
+
+                test('Forced calls is never progressive', function (done) {
+                    Selector.$.hiddenProjectsFilter.value = 'hello world';
+                    var stub = sinon.stub(Selector, '_filterProjectsNodes', function (filter, isProgressive) {
+                        assert.isFalse(isProgressive);
+                    });
+                    Selector._ioApplyCurrentFilter(true);
+                    stub.restore();
+
+                    done();
+                });
+            });
+
+            test('_onVisibleProjectTapDelegator');
+            test('_highlightProject');
+            test('_highlightProjects');
+        });
+
+        test('_onHostKeydown');
+        test('_onFilterKeydown');
 
     });
 </script>
