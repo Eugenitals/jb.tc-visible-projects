@@ -14,10 +14,11 @@ The following custom properties and mixins are available for styling:
 
 Name | Type | Description | Default
 ----------------|-------------|----------
-`--tc-text-color` | Prop | Text color | #000000
-`--tc-primary-color` | Prop |  Application primary color | #0CB0F2
-`--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
+`--tc-text-color` | Prop | Text color | #000
+`--tc-primary-color` | Prop |  Application primary color | #666
+`--tc-primary-text-color` | Prop |  Text color on primary color background | #fff
 `--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
+`--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
 `--tc-project-selector-item-template` | Mixin |  Applied to a project item  | {}
 `--tc-project-selector-item-template-focused` | Mixin |  Applied to a project item :hover and :focus  | {}
@@ -200,20 +201,6 @@ Name | Type | Description | Default
             .project-item:hover .highlight {
                 background-color: inherit;
             }
-
-            /*.project-item:hover:after {*/
-                /*position: absolute;*/
-                /*top: 0;*/
-                /*left: -7px;*/
-                /*content: '';*/
-
-                /*width: 0;*/
-                /*height: 0;*/
-                /*border-top: 13.5px solid transparent;*/
-                /*border-bottom: 13.5px solid transparent;*/
-
-                /*border-right: 8px solid var(--tc-primary-color);*/
-            /*}*/
 
             /* Hope 9 levels will be enough */
             .project-level-1 { padding-left: 0px; }
