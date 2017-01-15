@@ -38,6 +38,7 @@ Name | Type | Description | Default
                 --tc-project-selector-highlight-color: #ffff80;
 
                 display: block;
+                outline: 0;
                 color: var(--tc-text-color);
             }
 
@@ -258,7 +259,7 @@ Name | Type | Description | Default
                             <input id="hiddenProjectsFilter"
                                    type="text" placeholder="Find projects by name..."
                                    on-focus="_onFilterFocus"
-                                   on-keyup="_onFilterKeyup">
+                                   on-keydown="_onFilterKeydown">
 
                             <!-- Very special placeholder for IE -->
                             <!--[if IE]>
@@ -281,9 +282,7 @@ Name | Type | Description | Default
                                 </div>
                             </template>
 
-                            <ul id="hiddenProjectsSelector" class="projects-container__selector" tabindex="0"
-                                on-keydown="_onHiddenProjectsSelectorKeydown"
-                                on-focus="_onHiddenProjectsSelectorFocus"
+                            <ul id="hiddenProjectsSelector" class="projects-container__selector hidden"
                                 on-tap="_onHiddenProjectTapDelegator">
                                 <!-- ...hidden projects will be here... -->
                             </ul>
@@ -394,6 +393,14 @@ Name | Type | Description | Default
                         value: false,
                         observer: '_debugChanged'
                     }
+                },
+
+                hostAttributes: {
+                    tabindex: 0
+                },
+
+                listeners: {
+                    'keydown': '_onHostKeydown',
                 },
 
                 /** @type {Number} */
@@ -547,6 +554,9 @@ Name | Type | Description | Default
                     if (isFilterChanged) {
                         this.$.hiddenProjectsBody.scrollTop = 0;
                     }
+
+                    // Reveal selector on first apply
+                    this.$.hiddenProjectsSelector.classList.remove(Classes.HIDDEN);
                 },
 
                 _debugChanged: function (isOn) {
@@ -696,14 +706,15 @@ Name | Type | Description | Default
                     }
                 },
 
-                _focusNextProject: function () {
-                    var node;
-
-                    if (! this._focusedNode) {
-                        node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
-                    } else {
-                        node = Polymer.dom(this._focusedNode).nextSibling;
+                /**
+                 * @param node {Node}
+                 * @return {Node} next visible node
+                 */
+                _getNextVisibleProject: function (node) {
+                    if (! node) {
+                        return null;
                     }
+                    node = Polymer.dom(node).nextSibling;
 
                     while (node) {
                         if (node.style.display !== 'none') {
@@ -714,23 +725,23 @@ Name | Type | Description | Default
 
                     if (! node) {
                         if (this._projectsNodes.length < 1) {
-                            return;
+                            return null;
                         }
                         node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
                     }
 
-                    this._focusedNode = node;
-                    this._focusedNode.focus();
+                    return node;
                 },
 
-                _focusPrevProject: function () {
-                    var node;
-
-                    if (! this._focusedNode) {
-                        node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
-                    } else {
-                        node = Polymer.dom(this._focusedNode).previousSibling;
+                /**
+                 * @param node {Node}
+                 * @return {Node} previous visible node
+                 */
+                _getPrevVisibleProject: function (node) {
+                    if (! node) {
+                        return null;
                     }
+                    node = Polymer.dom(node).previousSibling;
 
                     while (node) {
                         if (node.style.display !== 'none') {
@@ -741,33 +752,47 @@ Name | Type | Description | Default
 
                     if (! node) {
                         if (this._projectsNodes.length < 1) {
-                            return;
+                            return null;
                         }
                         node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
                     }
 
-                    this._focusedNode = node;
-                    this._focusedNode.focus();
+                    return node;
                 },
 
-                _onHiddenProjectsSelectorKeydown: function (e) {
+                _onHostKeydown: function (e) {
                     e.stopPropagation();
 
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
                             e.preventDefault();
-                            this._focusNextProject();
+                            this._focusedNode = this._getNextVisibleProject(
+                                this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
+                            )
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         case Keycodes.UP:
                             e.preventDefault();
-                            this._focusPrevProject();
+                            this._focusedNode = this._getPrevVisibleProject(
+                                this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).lastChild
+                            );
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         case Keycodes.LEFT:
                             e.preventDefault();
                             this._setProjectSelected(e.target.getAttribute('data-id'), true);
                             this.async(function () {
-                                this._focusNextProject();
-                            }, 100);
+                                this._focusedNode = this._getNextVisibleProject(
+                                    this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
+                                );
+                                if (this._focusedNode) {
+                                    this._focusedNode.focus();
+                                }
+                            }, 10);
                             break;
                         case Keycodes.ESC:
                             e.preventDefault();
@@ -776,19 +801,23 @@ Name | Type | Description | Default
                     }
                 },
 
-                _onFilterKeyup: function (e) {
+                _onFilterKeydown: function (e) {
                     e.stopPropagation();
 
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
                             e.preventDefault();
-                            this._focusedNode = null;
-                            this._focusNextProject();
+                            this._focusedNode = this._getNextVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).firstChild);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         case Keycodes.UP:
                             e.preventDefault();
-                            this._focusedNode = null;
-                            this._focusPrevProject();
+                            this._focusedNode = this._getPrevVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).lastChild);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         default:
                             this.debounce('applyFilterOnInput', function () {
@@ -817,15 +846,10 @@ Name | Type | Description | Default
                     if (info && info.role === 'select') {
                         this._setProjectSelected(info.target.getAttribute('data-id'), true);
                         this.async(function () {
-                            this._focusedNode = info.target;
-                            this._focusNextProject();
+                            this._focusedNode = this._getNextVisibleProject(info.target);
+                            this.focus();
                         }, 100);
                     }
-                },
-
-                _onHiddenProjectsSelectorFocus: function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
                 },
 
                 _onVisibleProjectTapDelegator: function (e) {
