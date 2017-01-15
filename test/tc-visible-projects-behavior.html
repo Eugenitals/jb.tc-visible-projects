@@ -7,23 +7,22 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
     <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
-    <script src="../../iron-test-helpers/mock-interactions.js"></script>
 
     <link rel="import" href="../tc-visible-projects.html">
   </head>
   <body>
 
-    <test-fixture id="tcVisibleProjects">
+    <test-fixture id="basic">
       <template>
         <tc-visible-projects></tc-visible-projects>
       </template>
     </test-fixture>
 
     <script>
-      suite('<tc-visible-projects>', function() {
+      suite('Polymer.jb.TcVisibleProjectsBehavior', function() {
 
-        test('has correct "is" attribute ', function() {
-          var element = fixture('tcVisibleProjects');
+        test('instantiating the element works', function() {
+          var element = fixture('basic');
           assert.equal(element.is, 'tc-visible-projects');
         });
 
