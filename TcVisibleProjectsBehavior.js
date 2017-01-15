@@ -98,40 +98,6 @@
     /** @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior */
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
-         * Load projects JSON by url
-         * @param url {String}
-         */
-        loadProjects: function (url) {
-            if (! url) {
-                return;
-            }
-
-            this._ioSetLoading(true);
-
-            new Ajax(url, {
-                context: this,
-                success: function (_responseText) {
-                    var responseData;
-
-                    try {
-                        responseData = JSON.parse(_responseText);
-                    }
-                    catch (e) {
-                        return this._onProjectsLoadError(new Error(Errors.CAN_NOT_PARSE_RESPONSE));
-                    }
-
-                    this._onProjectsLoaded(responseData.project);
-                },
-                error: function (ajax, status) {
-                    this._onProjectsLoadError(new Error(Errors.COMMUNICATION_ERROR({ url: ajax.url, status: status })));
-                },
-                done: function () {
-                    this._ioSetLoading(false);
-                }
-            });
-        },
-
-        /**
          * Move selected project down (or up) inside its parent
          * @param projectId {String}
          * @param [isReverse] {Boolean} true to move project up
@@ -184,6 +150,40 @@
 
         /** @type {Array<String>} */
         _selectedProjects: null,
+
+        /**
+         * Load projects JSON by url
+         * @param url {String}
+         */
+        _loadProjects: function (url) {
+            if (! url) {
+                return;
+            }
+
+            this._ioSetLoading(true);
+
+            new Ajax(url, {
+                context: this,
+                success: function (_responseText) {
+                    var responseData;
+
+                    try {
+                        responseData = JSON.parse(_responseText);
+                    }
+                    catch (e) {
+                        return this._onProjectsLoadError(new Error(Errors.CAN_NOT_PARSE_RESPONSE));
+                    }
+
+                    this._onProjectsLoaded(responseData.project);
+                },
+                error: function (ajax, status) {
+                    this._onProjectsLoadError(new Error(Errors.COMMUNICATION_ERROR({ url: ajax.url, status: status })));
+                },
+                done: function () {
+                    this._ioSetLoading(false);
+                }
+            });
+        },
 
         /**
          * @param rawProjects {Array<{ id:String, parentProjectId:String, name:String }>}

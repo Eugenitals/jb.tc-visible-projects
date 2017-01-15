@@ -14,9 +14,9 @@ The following custom properties and mixins are available for styling:
 
 Name | Type | Description | Default
 ----------------|-------------|----------
-`--tc-text-color` | Prop | Text color | #000
-`--tc-primary-color` | Prop |  Application primary color | #666
-`--tc-primary-text-color` | Prop |  Text color on primary color background | #fff
+`--tc-text-color` | Prop | Base text color | #000
+`--tc-primary-color` | Prop |  Primary color | #666
+`--tc-primary-text-color` | Prop |  Text color over primary color as background | #fff
 `--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
@@ -404,7 +404,7 @@ Name | Type | Description | Default
 
                     /**
                      * Highlight count per iteration.
-                     * Typically ~max visible rows inside selector
+                     * Typically ~max simultaneously visible rows inside selector
                      */
                     highlightFactor: {
                         type: Number,
@@ -412,7 +412,7 @@ Name | Type | Description | Default
                     },
 
                     /**
-                     * Set to true to enable logs
+                     * True - to enable logs
                      */
                     debug: {
                         type: Boolean,
@@ -456,7 +456,7 @@ Name | Type | Description | Default
                     this._projectsNodes = [];
                     this._initProjectTemplate();
                     this._initSelectedProjects();
-                    this.loadProjects(this.url);
+                    this._loadProjects(this.url);
                 },
 
                 attached: function () {
