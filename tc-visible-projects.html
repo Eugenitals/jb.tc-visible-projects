@@ -207,6 +207,34 @@ Name | Type | Description | Default
                 background-color: inherit;
             }
 
+            .project-item[selected] {
+                position: relative;
+            }
+            .project-item[selected]:after{
+                content: '✓';
+                opacity: .5;
+                font-size: 1.2em;
+
+                position: absolute;
+                top: 1px;
+                right: 5px;
+
+                /** If we want icon instead */
+                /*top: 0px;
+                right: 3px;
+                width: 20px;
+                height: 20px;
+                background-image: url('./img/check.svg');
+                background-repeat: no-repeat;
+                background-position: 0px 0px;
+                background-size: 20px 20px;*/
+            }
+            .project-item[selected]:focus:after,
+            .project-item[selected]:hover:after {
+                top: 4px;
+                right: 15px;
+            }
+
             /* Hope 9 levels will be enough */
             .project-level-1 { padding-left: 0px; }
             .project-level-2 { padding-left: 20px; }
@@ -614,6 +642,7 @@ Name | Type | Description | Default
                  */
                 _filterProjectsNodes: function (filter, isProgressive) {
                     var filtered = this._getFilteredProjects(filter, isProgressive);
+                    var selected = this._getSelectedProjectsMap();
                     var highlight = [];
                     var filterParts = filter.split(' ');
                     var _node, _id;
@@ -623,6 +652,12 @@ Name | Type | Description | Default
                         _id = _node.getAttribute('data-id');
 
                         if (filtered[_id]) {
+                            if (selected[_id] && !_node.hasAttribute('selected')) {
+                                _node.setAttribute('selected', true);
+                            }
+                            if (!selected[_id] && _node.hasAttribute('selected')) {
+                                _node.removeAttribute('selected');
+                            }
                             this._ioShowProjectNode(_node);
                             highlight.push(_node);
                         } else {

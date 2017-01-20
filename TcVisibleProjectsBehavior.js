@@ -266,6 +266,13 @@ window.Polymer = window.Polymer || {};
             return html;
         },
 
+        _getSelectedProjectsMap: function () {
+            if (this._selectedTree) {
+                return this._selectedTree.index();
+            }
+            return {};
+        },
+
         /**
          * Returns a map of projects that matched with filter
          * @param filter {String}
