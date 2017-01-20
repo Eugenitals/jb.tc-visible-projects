@@ -2,6 +2,7 @@
 <link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-icon/iron-icon.html">
 <link rel="import" href="../iron-localstorage/iron-localstorage.html">
+<link rel="import" href="../polymer-sortablejs/polymer-sortablejs.html">
 <link rel="import" href="./tc-visible-projects-behavior.html">
 
 <!--
@@ -111,6 +112,11 @@ Name | Type | Description | Default
                 display: none;
             }
 
+            .sortable-ghost {
+                opacity: .5;
+                border: 2px dashed #000;
+            }
+
             .projects-container {
                 width: 50%;
                 border-left: 1px solid rgba(0,0,0,.12);
@@ -151,8 +157,11 @@ Name | Type | Description | Default
             .project-item:nth-of-type(2n) {
                 @apply(--tc-project-selector-item-nth-even);
             }
-            .project-item:hover,
-            .project-item:focus {
+            .project-item[disabled] {
+                opacity: .3;
+            }
+            .projects-container__selector:not([dragged]) .project-item:hover,
+            .projects-container__selector:not([dragged]) .project-item:focus {
                 position: relative;
                 cursor: pointer;
                 outline: 0;
@@ -177,21 +186,21 @@ Name | Type | Description | Default
                 display: none;
                 background-color: var(--tc-primary-color);
                 padding-left: 3px;
-                font-size: .8em;
+
+                font-size: .9em;
+                font-weight: bold;
+
+                opacity: .7;
 
                 position: absolute;
-                top: 8px;
-                right: 3px;
-            }
+                top: 6px;
+                right: 10px;
 
-            .project-item__order-arrow {
-                cursor: pointer;
-                padding: 5px;
-                opacity: .5;
+                cursor: move;
             }
-            .project-item__order-arrow[event-role="index-up"] { padding-right: 2px }
-            .project-item__order-arrow[event-role="index-down"] { padding-left: 2px }
-            .project-item__order-arrow:hover { opacity: 1; }
+            .project-item__order:hover {
+                opacity: 1;
+            }
 
             #visibleProjectsSelector:hover .project-item:hover .project-item__order {
                 display: inline-block;
@@ -275,9 +284,14 @@ Name | Type | Description | Default
                             <strong>My visible projects</strong>
                         </div>
                         <div class="projects-container__body">
-                            <ul id="visibleProjectsSelector" class="projects-container__selector"
+                            <ul id="visibleProjectsSelectorContainer" class="projects-container__selector"
                                 on-tap="_onVisibleProjectTapDelegator">
-                                <!-- ...visible projects will be here... -->
+                                <sortable-js id="visibleProjectsSelector" draggable=".project-item"
+                                             handle=".project-item__order"
+                                             on-start="_onProjectsDragStart"
+                                             on-end="_onProjectsDragEnd">
+                                    <!-- ...visible projects will be here... -->
+                                </sortable-js>
                             </ul>
                         </div>
                     </td>
@@ -335,7 +349,6 @@ Name | Type | Description | Default
                 PROJECT: 'project-item',
                 PROJECT_TEMPLATE: 'project-item__template',
                 PROJECT_ORDER: 'project-item__order',
-                PROJECT_ORDER_ARROW: 'project-item__order-arrow',
                 PROJECT_LEVEL_PREFIX: 'project-level-',
                 HIGHLIGHT: 'highlight',
                 HIDDEN: 'hidden'
@@ -473,6 +486,9 @@ Name | Type | Description | Default
                     // Ensure local DOM initialized
                     this.async(function () {
                         this.$.hiddenProjectsFilter.focus();
+
+                        // Otherwise it won`t be able to cancel item move... DAMN DEVELOPERS!
+                        this.$.visibleProjectsSelector.sortable.options.onMove = this._onProjectDragMove.bind(this);
                     }, 1);
                 },
 
@@ -620,10 +636,7 @@ Name | Type | Description | Default
                     var visibleProjectTemplate = hiddenProjectTemplate.slice();
                     visibleProjectTemplate.splice(
                         hiddenProjectTemplate.indexOf(projectTemplate) + 1, 0,
-                        '<div class="' + Classes.PROJECT_ORDER + '">',
-                            '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-up" data-id="${id}" title="Move project up">▲</span>',
-                            '<span class="' + Classes.PROJECT_ORDER_ARROW + '" event-role="index-down" data-id="${id}" title="Move project down">▼</span>',
-                        '</div>'
+                        '<div class="' + Classes.PROJECT_ORDER + '">:::::</div>'
                     )
 
                     this._hiddenProjectTemplateFn = _.template(hiddenProjectTemplate.join(''));
@@ -894,12 +907,44 @@ Name | Type | Description | Default
                     if (info) {
                         if (info.role === 'select') {
                             this._setProjectSelected(info.target.getAttribute('data-id'), false);
-                        } else if (info.role === 'index-up') {
-                            this.shiftProject(info.target.getAttribute('data-id'), true);
-                        } else if (info.role === 'index-down') {
-                            this.shiftProject(info.target.getAttribute('data-id'));
                         }
                     }
+                },
+
+                _onProjectDragMove: function (e) {
+                    var to = e.related;
+                    if (to.hasAttribute('disabled')) {
+                        return false;
+                    }
+                },
+
+                _onProjectsDragStart: function (e) {
+                    if (e.detail) {
+                        return;
+                    }
+
+                    var item = e.item;
+                    var itemId = item.getAttribute('data-id');
+                    var sibilings = this._getProjectSibilings(itemId);
+
+                    Polymer.dom(this.$.visibleProjectsSelector).children.forEach(function (_node) {
+                        if (sibilings.indexOf(_node.getAttribute('data-id')) === -1) {
+                            _node.setAttribute('disabled', true);
+                        }
+                    }, this);
+
+                    this.$.visibleProjectsSelectorContainer.setAttribute('dragged', true);
+                },
+
+                _onProjectsDragEnd: function (e) {
+                    if (e.detail) {
+                        return;
+                    }
+
+                    var item = e.item;
+                    var itemId = item.getAttribute('data-id');
+                    this.$.visibleProjectsSelectorContainer.removeAttribute('dragged');
+                    this.setSelectedProjectIndex(itemId, e.newIndex);
                 },
 
                 /**

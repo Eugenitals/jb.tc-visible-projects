@@ -100,42 +100,19 @@ window.Polymer = window.Polymer || {};
     /** @polymerBehavior Polymer.jb.TcVisibleProjectsBehavior */
     Polymer.jb.TcVisibleProjectsBehavior = {
         /**
-         * Move selected project down (or up) inside its parent
+         * Set selected project index and re-draw selected projects tree
          * @param projectId {String}
-         * @param [isReverse] {Boolean} true to move project up
+         * @param [index] {Number} new index in list
          */
-        shiftProject: function (projectId, isReverse) {
-            var node = this._selectedTree.get(projectId);
-            if (! node) {
-                return;
-            }
+        setSelectedProjectIndex: function (projectId, index) {
+            // console.log(projectId, index, this._getSelectedProjects());
 
-            var children = node.parent.children;
-            var index = children.indexOf(node);
-
-            // Shift DOWN
-            if (isReverse) {
-                if (index < 1) {
-                    return;
-                } else {
-                    var temp = children[index - 1];
-                    children[index - 1] = children[index];
-                    children[index] = temp;
-                    this._setSelectedProjects(this._getSelectedProjects());
-                }
+            var selected = this._getSelectedProjects();
+            if (!_.isNaN(index) && index > -1) {
+                selected.splice(selected.indexOf(projectId), 1);
+                selected.splice(index + 1, 0, projectId);
             }
-
-            // Shift Up
-            else {
-                if (index === children.length - 1) {
-                    return;
-                } else {
-                    var temp = children[index + 1];
-                    children[index + 1] = children[index];
-                    children[index] = temp;
-                    this._setSelectedProjects(this._getSelectedProjects());
-                }
-            }
+            this._setSelectedProjects(selected);
         },
 
         /** @type {Tree} */
@@ -271,6 +248,13 @@ window.Polymer = window.Polymer || {};
                 return this._selectedTree.index();
             }
             return {};
+        },
+
+        _getProjectSibilings: function (id) {
+            var node = this._selectedTree.get(id);
+            return node.parent.children.map(function (_node) {
+                return _node.id;
+            });
         },
 
         /**
