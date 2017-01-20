@@ -160,6 +160,34 @@ Name | Type | Description | Default
             .project-item[disabled] {
                 opacity: .3;
             }
+            .project-item[selected] {
+                position: relative;
+            }
+            .project-item[selected]:after{
+                content: '✓';
+                opacity: .7;
+                font-size: 1.2em;
+
+                position: absolute;
+                top: 1px;
+                right: 5px;
+
+                /** If we want icon instead */
+                /*top: 0px;
+                right: 3px;
+                width: 20px;
+                height: 20px;
+                background-image: url('./img/check.svg');
+                background-repeat: no-repeat;
+                background-position: 0px 0px;
+                background-size: 20px 20px;*/
+            }
+            .project-item[selected]:focus:after,
+            .project-item[selected]:hover:after {
+                top: 4px;
+                right: 15px;
+            }
+
             .projects-container__selector:not([dragged]) .project-item:hover,
             .projects-container__selector:not([dragged]) .project-item:focus {
                 position: relative;
@@ -214,34 +242,6 @@ Name | Type | Description | Default
             .project-item:focus .highlight,
             .project-item:hover .highlight {
                 background-color: inherit;
-            }
-
-            .project-item[selected] {
-                position: relative;
-            }
-            .project-item[selected]:after{
-                content: '✓';
-                opacity: .5;
-                font-size: 1.2em;
-
-                position: absolute;
-                top: 1px;
-                right: 5px;
-
-                /** If we want icon instead */
-                /*top: 0px;
-                right: 3px;
-                width: 20px;
-                height: 20px;
-                background-image: url('./img/check.svg');
-                background-repeat: no-repeat;
-                background-position: 0px 0px;
-                background-size: 20px 20px;*/
-            }
-            .project-item[selected]:focus:after,
-            .project-item[selected]:hover:after {
-                top: 4px;
-                right: 15px;
             }
 
             /* Hope 9 levels will be enough */
