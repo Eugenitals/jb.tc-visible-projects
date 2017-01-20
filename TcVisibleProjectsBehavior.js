@@ -436,7 +436,7 @@ window.Polymer = window.Polymer || {};
             }
 
             // Select children
-            var projectsIds =  Tree.nodeToArray(node, this._currentFilteredProjects);
+            var projectsIds = Tree.nodeToArray(node, this._currentFilteredProjects);
 
             // Handle selection
             for (var i = 0, len = projectsIds.length; i <len; i++) {
@@ -445,7 +445,6 @@ window.Polymer = window.Polymer || {};
 
             // Update selected projects
             this._setSelectedProjects(this._getSelectedProjects());
-            this._ioApplyCurrentFilter(true);
             return true;
         },
 
@@ -457,7 +456,6 @@ window.Polymer = window.Polymer || {};
 
             this._removeSelectedProject(node);
             this._setSelectedProjects(this._getSelectedProjects());
-            this._ioApplyCurrentFilter(true);
             return true;
         },
 
