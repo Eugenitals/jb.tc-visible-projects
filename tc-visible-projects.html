@@ -202,7 +202,15 @@ Name | Type | Description | Default
                 background-size: 20px 20px;*/
             }
 
-            .projects-container__selector:not([dragged]) .project-item_focused,
+            .moved:before {
+                content: '';
+
+                background-color: var(--tc-primary-color);
+                width: 3px;
+                height: 1em;
+            }
+
+            .projects-container__selector:not([dragged]) .project-item.project-item_focused,
             .projects-container__selector:not([dragged]) .project-item:hover,
             .projects-container__selector:not([dragged]) .project-item:focus {
                 @apply(--tc-project-selector-item-focused);
@@ -236,11 +244,13 @@ Name | Type | Description | Default
                 display: inline-block;
             }
 
+            .project-item.project-item_focused .project-item__template,
             .project-item:focus .project-item__template,
             .project-item:hover .project-item__template {
                 @apply(--tc-project-selector-item-template-focused);
             }
 
+            .project-item.project-item_focused .highlight,
             .project-item:focus .highlight,
             .project-item:hover .highlight {
                 background-color: inherit;
@@ -750,12 +760,23 @@ Name | Type | Description | Default
 
                 _setProjectSelected: function (id, isSelected) {
                     if (isSelected) {
-                        if (this._selectProject(id)) {
+                        var ids = this._getFlatProject(id);
+                        ids.map(function (_id) {
+                            this.$$('[data-id="' + _id +'"]').classList.add('project-item_focused');
+                        }, this);
+
+                        this.async(function () {
+                            this._selectProject(id);
+
                             this.async(function () {
-                                var addedNode = this.$$('[data-id="' + id +'"]');
-                                addedNode.focus();
+                                var _node;
+                                ids.forEach(function (_id) {
+                                    _node = this.$$('[data-id="' + _id +'"]');
+                                    _node.classList.add('project-item_focused');
+                                }, this);
+                                _node.focus();
                             }, 1);
-                        }
+                        }, 50);
                     } else {
                         this._unselectProject(id);
                     }

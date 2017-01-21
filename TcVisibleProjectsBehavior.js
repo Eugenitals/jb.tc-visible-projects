@@ -243,6 +243,9 @@ window.Polymer = window.Polymer || {};
             return html;
         },
 
+        /**
+         * @return {Object}
+         */
         _getSelectedProjectsMap: function () {
             if (this._selectedTree) {
                 return this._selectedTree.index();
@@ -250,11 +253,30 @@ window.Polymer = window.Polymer || {};
             return {};
         },
 
-        _getProjectSibilings: function (id) {
-            var node = this._selectedTree.get(id);
+        /**
+         * @param projectId
+         * @return {Array<String>}
+         */
+        _getProjectSibilings: function (projectId) {
+            var node = this._selectedTree.get(projectId);
+            if (! node) {
+                return [];
+            }
             return node.parent.children.map(function (_node) {
                 return _node.id;
             });
+        },
+
+        /**
+         * @param projectId {String}
+         * @return {Array<String>}
+         */
+        _getFlatProject: function (projectId) {
+            var node = this._projectsTree.get(projectId);
+            if (! node) {
+                return [];
+            }
+            return Tree.nodeToArray(node);
         },
 
         /**
