@@ -38,19 +38,26 @@
         <template>
             <style is="custom-style">
                 tc-visible-projects {
-                    --tc-primary-color: #5889a6;
+                    --tc-primary-color-red: 88;
+                    --tc-primary-color-green: 137;
+                    --tc-primary-color-blue: 166;
                     --tc-primary-text-color: #fff;
 
-                    --tc-project-selector-item-nth-even: {
+/*                    --tc-project-selector-item-nth-even: {
                         background-color: rgba(88, 137, 166, .05);
-                    };
+                    };*/
 
                     --tc-project-selector-item-template: {
                         padding: 3px 3px 3px 23px;
-                        background-image: url('bookmark-outline.svg');
                         background-repeat: no-repeat;
                         background-position: 0px 0px;
                         background-size: 20px 20px;
+
+                        background-image: url('bookmark-outline.svg');
+                    };
+
+                    --tc-project-selector-item-template-selected: {
+                        background-image: url('bookmark-check.svg');
                     };
 
                     --tc-project-selector-item-template-focused: {

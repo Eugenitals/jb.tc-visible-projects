@@ -276,7 +276,7 @@ window.Polymer = window.Polymer || {};
             if (! node) {
                 return [];
             }
-            return Tree.nodeToArray(node);
+            return Tree.nodeToArray(node, this._currentFilteredProjects);
         },
 
         /**

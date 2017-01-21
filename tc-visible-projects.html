@@ -16,12 +16,15 @@ The following custom properties and mixins are available for styling:
 Name | Type | Description | Default
 ----------------|-------------|----------
 `--tc-text-color` | Prop | Base text color | #000
-`--tc-primary-color` | Prop |  Primary color | #666
+`--tc-primary-color-red` | Prop |  Primary color red component | 102
+`--tc-primary-color-green` | Prop |  Primary color green component | 102
+`--tc-primary-color-blue` | Prop |  Primary color blue component | 102
 `--tc-primary-text-color` | Prop |  Text color over primary color as background | #fff
 `--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
 `--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
 `--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
 `--tc-project-selector-item-template` | Mixin |  Applied to a project item  | {}
+`--tc-project-selector-item-template-selected` | Mixin |  Applied to a selected project item  | {}
 `--tc-project-selector-item-template-focused` | Mixin |  Applied to a project item :hover and :focus  | {}
 
 @demo demo/index.html
@@ -32,7 +35,9 @@ Name | Type | Description | Default
         <style>
             :host {
                 --tc-text-color: rgba(0,0,0,.87);
-                --tc-primary-color: #666;
+                --tc-primary-color-red: 102;
+                --tc-primary-color-green: 102;
+                --tc-primary-color-blue: 102;
                 --tc-primary-text-color: #fff;
 
                 --tc-project-selector-height: 370px;
@@ -48,8 +53,10 @@ Name | Type | Description | Default
                                 0px 3px 1px -2px rgba(0, 0, 0, 0.2);
 
                     color: var(--tc-primary-text-color);
-                    background-color: var(--tc-primary-color);
+                    background-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
                 };
+
+                --tc-project-selector-item-nth-even: {};
 
                 display: block;
                 outline: 0;
@@ -83,7 +90,7 @@ Name | Type | Description | Default
                 margin-bottom: 0;
 
                 border-bottom-width: 2px;
-                border-bottom-color: var(--tc-primary-color);
+                border-bottom-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
             }
 
             #searchIcon {
@@ -113,18 +120,13 @@ Name | Type | Description | Default
 
             .href-action {
                 text-decoration: none;
-                color: var(--tc-primary-color);
-                border-bottom: 1px dotted var(--tc-primary-color);
+                color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+                border-bottom: 1px dotted rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
             }
 
             .highlight {
                 background-color: var(--tc-project-selector-highlight-color);
             }
-
-            /*.blink {
-                transition: background-color .5s ease-out;
-                background-color: var(--tc-primary-color);
-            }*/
 
             .hidden {
                 display: none;
@@ -179,38 +181,10 @@ Name | Type | Description | Default
             .project-item[disabled] {
                 opacity: .3;
             }
-            .project-item[selected] {
-                position: relative;
-            }
-            .project-item[selected]:after{
-                content: '✓';
-                opacity: .7;
-                font-size: 1.2em;
-
-                position: absolute;
-                top: 3px;
-                right: 5px;
-
-                /** If we want icon instead */
-                /*top: 0px;
-                right: 3px;
-                width: 20px;
-                height: 20px;
-                background-image: url('./img/check.svg');
-                background-repeat: no-repeat;
-                background-position: 0px 0px;
-                background-size: 20px 20px;*/
+            .project-item[selected] .project-item__template {
+                @apply(--tc-project-selector-item-template-selected);
             }
 
-            .moved:before {
-                content: '';
-
-                background-color: var(--tc-primary-color);
-                width: 3px;
-                height: 1em;
-            }
-
-            .projects-container__selector:not([dragged]) .project-item.project-item_focused,
             .projects-container__selector:not([dragged]) .project-item:hover,
             .projects-container__selector:not([dragged]) .project-item:focus {
                 @apply(--tc-project-selector-item-focused);
@@ -222,7 +196,7 @@ Name | Type | Description | Default
 
             .project-item__order {
                 display: none;
-                background-color: var(--tc-primary-color);
+                background-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
                 padding-left: 3px;
 
                 font-size: .9em;
@@ -244,13 +218,11 @@ Name | Type | Description | Default
                 display: inline-block;
             }
 
-            .project-item.project-item_focused .project-item__template,
             .project-item:focus .project-item__template,
             .project-item:hover .project-item__template {
                 @apply(--tc-project-selector-item-template-focused);
             }
 
-            .project-item.project-item_focused .highlight,
             .project-item:focus .highlight,
             .project-item:hover .highlight {
                 background-color: inherit;
@@ -641,15 +613,18 @@ Name | Type | Description | Default
                             'event-role="select" tabindex="-1">',
                             '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
                                 projectTemplate,
-                                /* order controls will be */
                             '</div>',
                         '</li>'
                     ];
-                    var visibleProjectTemplate = hiddenProjectTemplate.slice();
-                    visibleProjectTemplate.splice(
-                        hiddenProjectTemplate.indexOf(projectTemplate) + 1, 0,
-                        '<div class="' + Classes.PROJECT_ORDER + '" title="Change project position">:::::</div>'
-                    )
+                    var visibleProjectTemplate = [
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" ' +
+                            'event-role="select" tabindex="-1" selected>',
+                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
+                                projectTemplate,
+                        '<div class="' + Classes.PROJECT_ORDER + '" title="Change project position">:::::</div>',
+                            '</div>',
+                        '</li>'
+                    ];
 
                     this._hiddenProjectTemplateFn = _.template(hiddenProjectTemplate.join(''));
                     this._visibleProjectTemplateFn = _.template(visibleProjectTemplate.join(''));
@@ -760,37 +735,25 @@ Name | Type | Description | Default
 
                 _setProjectSelected: function (id, isSelected) {
                     if (isSelected) {
-                        var ids = this._getFlatProject(id);
+                        this._selectProject(id);
+                        /*var ids = this._getFlatProject(id);
                         ids.map(function (_id) {
-                            this.$$('[data-id="' + _id +'"]').classList.add('project-item_focused');
+                            this.$$('[data-id="' + _id +'"]').classList.add('move-out');
                         }, this);
 
                         this.async(function () {
                             this._selectProject(id);
 
                             this.async(function () {
-                                var _node;
                                 ids.forEach(function (_id) {
-                                    _node = this.$$('[data-id="' + _id +'"]');
-                                    _node.classList.add('project-item_focused');
+                                    this.$$('[data-id="' + _id +'"]').classList.add('move-in');
                                 }, this);
-                                _node.focus();
+                                this.$$('[data-id="' + id +'"]').focus();
                             }, 1);
-                        }, 50);
+                        }, 50);*/
                     } else {
                         this._unselectProject(id);
                     }
-                },
-
-                _blinkNode: function (nodes) {
-                    if (! _.isArray(nodes)) {
-                        nodes = [ nodes ];
-                    }
-
-                    nodes.forEach(function (_node) {
-                        _node.classList.add('blink');
-                        _node.focus();
-                    });
                 },
 
                 /**
