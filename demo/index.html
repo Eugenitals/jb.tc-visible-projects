@@ -58,6 +58,11 @@
                     };
                 }
 
+                .hotkey-tip {
+                    font-size: .8em;
+                    opacity: .7;
+                }
+
                 #tools {
                     padding-top: 12px;
                     text-align: right;
@@ -66,11 +71,14 @@
                 #okBtn {
                     background-color: #5889a6;
                     color: #fff;
-                    width: 130px;
                 }
 
                 #resetBtn {
                     width: 100px;
+                }
+
+                paper-button {
+                    padding: 10px 15px;
                 }
             </style>
 
@@ -96,7 +104,7 @@
             </tc-visible-projects>
             <div id="tools">
                 <paper-button id="resetBtn">Reset</paper-button>
-                <paper-button id="okBtn" raised>Save Changes</paper-button>
+                <paper-button id="okBtn" raised>Save Changes&nbsp;&nbsp;<span class="hotkey-tip">(⌘+⏎)</span></paper-button>
             </div>
 
             <script>
