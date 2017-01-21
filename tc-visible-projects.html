@@ -926,7 +926,7 @@ Name | Type | Description | Default
 
                 _onProjectsDragStart: function (e) {
                     if (e.detail) {
-                        return;
+                        return; // If not Polymer event
                     }
 
                     var item = e.item;
@@ -944,7 +944,7 @@ Name | Type | Description | Default
 
                 _onProjectsDragEnd: function (e) {
                     if (e.detail) {
-                        return;
+                        return; // If not Polymer event
                     }
 
                     var item = e.item;
