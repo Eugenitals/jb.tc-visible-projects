@@ -108,6 +108,11 @@ Name | Type | Description | Default
                 background-color: var(--tc-project-selector-highlight-color);
             }
 
+            /*.blink {
+                transition: background-color .5s ease-out;
+                background-color: var(--tc-primary-color);
+            }*/
+
             .hidden {
                 display: none;
             }
@@ -152,6 +157,7 @@ Name | Type | Description | Default
             }
 
             .project-item {
+                padding: 2px 5px;
                 cursor: default;
             }
             .project-item:nth-of-type(2n) {
@@ -169,7 +175,7 @@ Name | Type | Description | Default
                 font-size: 1.2em;
 
                 position: absolute;
-                top: 1px;
+                top: 3px;
                 right: 5px;
 
                 /** If we want icon instead */
@@ -182,11 +188,6 @@ Name | Type | Description | Default
                 background-position: 0px 0px;
                 background-size: 20px 20px;*/
             }
-            .project-item[selected]:focus:after,
-            .project-item[selected]:hover:after {
-                top: 4px;
-                right: 15px;
-            }
 
             .projects-container__selector:not([dragged]) .project-item:hover,
             .projects-container__selector:not([dragged]) .project-item:focus {
@@ -198,9 +199,6 @@ Name | Type | Description | Default
                 box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14),
                             0px 1px 5px 0px rgba(0, 0, 0, 0.12),
                             0px 3px 1px -2px rgba(0, 0, 0, 0.2);
-
-                margin: -3px -10px -3px -10px;
-                padding: 3px 10px 3px 10px;
 
                 color: var(--tc-primary-text-color);
                 background-color: var(--tc-primary-color);
@@ -748,10 +746,26 @@ Name | Type | Description | Default
 
                 _setProjectSelected: function (id, isSelected) {
                     if (isSelected) {
-                        this._selectProject(id);
+                        if (this._selectProject(id)) {
+                            this.async(function () {
+                                var addedNode = this.$$('[data-id="' + id +'"]');
+                                addedNode.focus();
+                            }, 1);
+                        }
                     } else {
                         this._unselectProject(id);
                     }
+                },
+
+                _blinkNode: function (nodes) {
+                    if (! _.isArray(nodes)) {
+                        nodes = [ nodes ];
+                    }
+
+                    nodes.forEach(function (_node) {
+                        _node.classList.add('blink');
+                        _node.focus();
+                    });
                 },
 
                 /**
@@ -856,16 +870,20 @@ Name | Type | Description | Default
                         case Keycodes.DOWN:
                             e.preventDefault();
                             this._focusedNode = this._getNextVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).firstChild);
-                            if (this._focusedNode) {
-                                this._focusedNode.focus();
-                            }
+                            this.async(function () {
+                                if (this._focusedNode) {
+                                    this._focusedNode.focus();
+                                }
+                            }, 300);
                             break;
                         case Keycodes.UP:
                             e.preventDefault();
                             this._focusedNode = this._getPrevVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).lastChild);
-                            if (this._focusedNode) {
-                                this._focusedNode.focus();
-                            }
+                            this.async(function () {
+                                if (this._focusedNode) {
+                                    this._focusedNode.focus();
+                                }
+                            }, 300);
                             break;
                         default:
                             this.debounce('applyFilterOnInput', function () {
@@ -893,10 +911,10 @@ Name | Type | Description | Default
 
                     if (info && info.role === 'select') {
                         this._setProjectSelected(info.target.getAttribute('data-id'), true);
+                        this._focusedNode = this._getNextVisibleProject(info.target);
                         this.async(function () {
-                            this._focusedNode = this._getNextVisibleProject(info.target);
                             this.focus();
-                        }, 100);
+                        }, 300);
                     }
                 },
 
