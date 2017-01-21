@@ -38,6 +38,19 @@ Name | Type | Description | Default
                 --tc-project-selector-height: 370px;
                 --tc-project-selector-highlight-color: #ffff80;
 
+                --tc-project-selector-item-focused: {
+                    position: relative;
+                    outline: 0;
+
+                    border-collapse: separate;
+                    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+                                0px 1px 5px 0px rgba(0, 0, 0, 0.12),
+                                0px 3px 1px -2px rgba(0, 0, 0, 0.2);
+
+                    color: var(--tc-primary-text-color);
+                    background-color: var(--tc-primary-color);
+                };
+
                 display: block;
                 outline: 0;
                 color: var(--tc-text-color);
@@ -189,19 +202,10 @@ Name | Type | Description | Default
                 background-size: 20px 20px;*/
             }
 
+            .projects-container__selector:not([dragged]) .project-item_focused,
             .projects-container__selector:not([dragged]) .project-item:hover,
             .projects-container__selector:not([dragged]) .project-item:focus {
-                position: relative;
-                cursor: pointer;
-                outline: 0;
-
-                border-collapse: separate;
-                box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14),
-                            0px 1px 5px 0px rgba(0, 0, 0, 0.12),
-                            0px 3px 1px -2px rgba(0, 0, 0, 0.2);
-
-                color: var(--tc-primary-text-color);
-                background-color: var(--tc-primary-color);
+                @apply(--tc-project-selector-item-focused);
             }
 
             .project-item__template {
@@ -634,7 +638,7 @@ Name | Type | Description | Default
                     var visibleProjectTemplate = hiddenProjectTemplate.slice();
                     visibleProjectTemplate.splice(
                         hiddenProjectTemplate.indexOf(projectTemplate) + 1, 0,
-                        '<div class="' + Classes.PROJECT_ORDER + '">:::::</div>'
+                        '<div class="' + Classes.PROJECT_ORDER + '" title="Change project position">:::::</div>'
                     )
 
                     this._hiddenProjectTemplateFn = _.template(hiddenProjectTemplate.join(''));
