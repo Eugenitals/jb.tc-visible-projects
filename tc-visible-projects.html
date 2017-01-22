@@ -828,14 +828,16 @@ Name | Type | Description | Default
                 },
 
                 /**
-                 * @param node {Node}
+                 * @param [node] {Element}
+                 * @param container {Element}
                  * @return {Node} next visible node
                  */
-                _getNextVisibleProject: function (node) {
-                    if (! node) {
-                        return null;
+                _getNextVisibleProject: function (node, container) {
+                    if (node) {
+                        node = Polymer.dom(node).nextSibling;
+                    } else {
+                        node = Polymer.dom(container).firstChild;
                     }
-                    node = Polymer.dom(node).nextSibling;
 
                     while (node) {
                         if (node.style.display !== 'none') {
@@ -855,14 +857,16 @@ Name | Type | Description | Default
                 },
 
                 /**
-                 * @param node {Node}
+                 * @param [node] {Element}
+                 * @param container {Element}
                  * @return {Node} previous visible node
                  */
-                _getPrevVisibleProject: function (node) {
-                    if (! node) {
-                        return null;
+                _getPrevVisibleProject: function (node, container) {
+                    if (node) {
+                        node = Polymer.dom(node).previousSibling;
+                    } else {
+                        node = Polymer.dom(container).lastChild;
                     }
-                    node = Polymer.dom(node).previousSibling;
 
                     while (node) {
                         if (node.style.display !== 'none') {
@@ -894,9 +898,7 @@ Name | Type | Description | Default
                             break;
                         case Keycodes.UP:
                             e.preventDefault();
-                            this._focusedNode = this._getPrevVisibleProject(
-                                this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).lastChild
-                            );
+                            this._focusedNode = this._getPrevVisibleProject(this._focusedNode, this.$.hiddenProjectsSelector);
                             if (this._focusedNode) {
                                 this._focusedNode.focus();
                             }
@@ -905,9 +907,7 @@ Name | Type | Description | Default
                             e.preventDefault();
                             this._setProjectSelected(e.target.getAttribute('data-id'), true);
                             this.async(function () {
-                                this._focusedNode = this._getNextVisibleProject(
-                                    this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
-                                );
+                                this._focusedNode = this._getNextVisibleProject(this._focusedNode, this.$.hiddenProjectsSelector);
                                 if (this._focusedNode) {
                                     this._focusedNode.focus();
                                 }
@@ -925,7 +925,7 @@ Name | Type | Description | Default
                         case Keycodes.DOWN:
                             e.stopPropagation();
                             e.preventDefault();
-                            this._focusedNode = this._getNextVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).lastChild);
+                            this._focusedNode = this._getNextVisibleProject(null, this.$.hiddenProjectsSelector);
                             if (this._focusedNode) {
                                 this._focusedNode.focus();
                             }
@@ -933,7 +933,7 @@ Name | Type | Description | Default
                         case Keycodes.UP:
                             e.stopPropagation();
                             e.preventDefault();
-                            this._focusedNode = this._getPrevVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).firstChild);
+                            this._focusedNode = this._getPrevVisibleProject(null, this.$.hiddenProjectsSelector);
                             if (this._focusedNode) {
                                 this._focusedNode.focus();
                             }
@@ -964,7 +964,7 @@ Name | Type | Description | Default
 
                     if (info && info.role === 'select') {
                         this._setProjectSelected(info.target.getAttribute('data-id'), true);
-                        this._focusedNode = this._getNextVisibleProject(info.target);
+                        this._focusedNode = this._getNextVisibleProject(info.target, this.$.hiddenProjectsSelector);
                         this.async(function () {
                             this.focus();
                         }, 100);
