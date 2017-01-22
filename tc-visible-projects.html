@@ -132,9 +132,8 @@ Name | Type | Description | Default
                 display: none;
             }
 
-            .sortable-ghost {
-                opacity: .5;
-                border: 2px dashed #000;
+            .sortable-chosen {
+                border: 2px dashed rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
             }
 
             .projects-container {
@@ -220,7 +219,7 @@ Name | Type | Description | Default
                 opacity: 1;
             }
 
-            #visibleProjectsSelector:hover .project-item:hover .project-item__order {
+            #visibleProjectsSelector:hover .project-item:not(.sortable-chosen):hover .project-item__order {
                 display: inline-block;
             }
 
