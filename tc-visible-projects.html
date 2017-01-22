@@ -884,7 +884,6 @@ Name | Type | Description | Default
                 _onHostKeydown: function (e) {
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
-                            e.stopPropagation();
                             e.preventDefault();
                             this._focusedNode = this._getNextVisibleProject(
                                 this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
@@ -894,7 +893,6 @@ Name | Type | Description | Default
                             }
                             break;
                         case Keycodes.UP:
-                            e.stopPropagation();
                             e.preventDefault();
                             this._focusedNode = this._getPrevVisibleProject(
                                 this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).lastChild
@@ -904,7 +902,6 @@ Name | Type | Description | Default
                             }
                             break;
                         case Keycodes.LEFT:
-                            e.stopPropagation();
                             e.preventDefault();
                             this._setProjectSelected(e.target.getAttribute('data-id'), true);
                             this.async(function () {
@@ -926,22 +923,20 @@ Name | Type | Description | Default
                 _onFilterKeydown: function (e) {
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
+                            e.stopPropagation();
                             e.preventDefault();
-                            this._focusedNode = this._getNextVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).firstChild);
-                            this.async(function () {
-                                if (this._focusedNode) {
-                                    this._focusedNode.focus();
-                                }
-                            }, 300);
+                            this._focusedNode = this._getNextVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).lastChild);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         case Keycodes.UP:
+                            e.stopPropagation();
                             e.preventDefault();
-                            this._focusedNode = this._getPrevVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).lastChild);
-                            this.async(function () {
-                                if (this._focusedNode) {
-                                    this._focusedNode.focus();
-                                }
-                            }, 300);
+                            this._focusedNode = this._getPrevVisibleProject(Polymer.dom(this.$.hiddenProjectsSelector).firstChild);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
                             break;
                         default:
                             this.debounce('applyFilterOnInput', function () {
@@ -972,7 +967,7 @@ Name | Type | Description | Default
                         this._focusedNode = this._getNextVisibleProject(info.target);
                         this.async(function () {
                             this.focus();
-                        }, 300);
+                        }, 100);
                     }
                 },
 
