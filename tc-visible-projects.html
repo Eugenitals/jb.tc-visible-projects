@@ -162,6 +162,7 @@ Name | Type | Description | Default
             }
 
             .projects-container__selector {
+                position: relative;
                 outline: 0;
                 margin: 0;
                 padding: 0;
@@ -183,6 +184,11 @@ Name | Type | Description | Default
             }
             .project-item[selected] .project-item__template {
                 @apply(--tc-project-selector-item-template-selected);
+            }
+            .project-item.move-out,
+            .project-item.move-in {
+                outline: 0;
+                background-color: rgba(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue), .1);
             }
 
             .projects-container__selector:not([dragged]) .project-item:hover,
@@ -267,7 +273,7 @@ Name | Type | Description | Default
                         <div class="projects-container__title">
                             <strong>My visible projects</strong>
                         </div>
-                        <div class="projects-container__body">
+                        <div id="visibleProjectsBody" class="projects-container__body">
                             <ul id="visibleProjectsSelectorContainer" class="projects-container__selector"
                                 on-tap="_onVisibleProjectTapDelegator">
                                 <sortable-js id="visibleProjectsSelector" draggable=".project-item"
@@ -338,6 +344,8 @@ Name | Type | Description | Default
                 HIDDEN: 'hidden'
             };
 
+            var SCROLL_TICKS = 10;
+
             var log = emptyFn;
 
             function emptyFn() {}
@@ -359,6 +367,9 @@ Name | Type | Description | Default
 
                 return null;
             }
+
+            // decelerating to zero velocity
+            function easeOutQuad (t) { return t*(2-t) }
 
             Polymer({
                 /**
@@ -733,26 +744,68 @@ Name | Type | Description | Default
                     Polymer.dom(Polymer.dom(node).querySelector('[is-name]')).innerHTML = nameParts.join('');
                 },
 
-                _setProjectSelected: function (id, isSelected) {
-                    if (isSelected) {
-                        this._selectProject(id);
-                        /*var ids = this._getFlatProject(id);
-                        ids.map(function (_id) {
-                            this.$$('[data-id="' + _id +'"]').classList.add('move-out');
-                        }, this);
+                /**
+                 * Scroll to nodes inside body
+                 * @param nodes {Array<Element>}
+                 * @param body {Element}
+                 * @param [callback] {Function}
+                 */
+                _scrollToNodes: function (nodes, body, callback) {
+                    if (! nodes || !nodes.length) {
+                        return;
+                    }
 
-                        this.async(function () {
-                            this._selectProject(id);
+                    var baseScroll = body.scrollTop;
+                    var firstNode = nodes[0];
+                    var lastNode = nodes[nodes.length - 1];
+                    var range = [firstNode.offsetTop, lastNode.offsetTop + lastNode.offsetHeight];
+                    var rangeHeight = range[1] - range[0];
+                    var diff;
 
-                            this.async(function () {
-                                ids.forEach(function (_id) {
-                                    this.$$('[data-id="' + _id +'"]').classList.add('move-in');
-                                }, this);
-                                this.$$('[data-id="' + id +'"]').focus();
-                            }, 1);
-                        }, 50);*/
+                    if (rangeHeight >= body.offsetHeight) {
+                        diff = firstNode.offsetTop - body.scrollTop;
                     } else {
-                        this._unselectProject(id);
+                        diff = firstNode.offsetTop - body.scrollTop - (body.offsetHeight - rangeHeight) / 2;
+                    }
+
+                    var tik = 0;
+                    var scrollTikFn = function () {
+                        if (tik > SCROLL_TICKS) {
+                            if (_.isFunction(callback)) {
+                                callback(nodes);
+                            }
+                            return;
+                        }
+                        body.scrollTop = baseScroll + diff * easeOutQuad(tik / SCROLL_TICKS);
+                        tik++;
+                        setTimeout(scrollTikFn, 10);
+                    };
+                    scrollTikFn();
+                },
+
+                _setProjectSelected: function (id, isSelected) {
+                    var ids;
+
+                    if (isSelected && (ids = this._selectProject(id))) {
+                        this.async(function () {
+                            var _node;
+                            this._scrollToNodes(ids.map(function (_id) {
+                                _node = this.$$('[data-id="' + _id +'"]');
+                                _node.classList.add('move-in');
+                                return _node;
+                            }, this), this.$.visibleProjectsBody);
+                        }, 1);
+                    }
+
+                    if (!isSelected && (ids = this._unselectProject(id))){
+                        this.async(function () {
+                            var _node;
+                            this._scrollToNodes(ids.map(function (_id) {
+                                _node = this.$$('[data-id="' + _id +'"]');
+                                _node.classList.add('move-out');
+                                return _node;
+                            }, this), this.$.hiddenProjectsBody);
+                        }, 1);
                     }
                 },
 

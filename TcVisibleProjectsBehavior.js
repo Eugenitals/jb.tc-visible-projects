@@ -437,39 +437,52 @@ window.Polymer = window.Polymer || {};
             }
         },
 
+        /**
+         * @param projectId {String}
+         * @return {Array<String>, null}
+         */
         _selectProject: function (projectId) {
             var node = this._projectsTree.get(projectId);
             if (! node) {
-                return;
+                return null;
             }
 
             // Check for selection availability
             if (this._currentFilteredProjects && ! this._currentFilteredProjects[ node.id ]) {
-                return false;
+                return null;
             }
 
             // Select children
+            var oldSelected = this._getSelectedProjects();
             var projectsIds = Tree.nodeToArray(node, this._currentFilteredProjects);
-
-            // Handle selection
             for (var i = 0, len = projectsIds.length; i <len; i++) {
                 this._addSelectedProject(ProjectsMap.get(projectsIds[i]), projectsIds);
             }
 
             // Update selected projects
-            this._setSelectedProjects(this._getSelectedProjects());
-            return true;
+            var newSelected = this._getSelectedProjects();
+            this._setSelectedProjects(newSelected);
+            return _.difference(newSelected, oldSelected);
         },
 
+        /**
+         * @param projectId {String}
+         * @return {Array<String>, null}
+         */
         _unselectProject: function (projectId) {
             var node = this._selectedTree.get(projectId);
             if (! node) {
-                return;
+                return null;
             }
 
+            // Remove children
+            var oldSelected = this._getSelectedProjects();
             this._removeSelectedProject(node);
-            this._setSelectedProjects(this._getSelectedProjects());
-            return true;
+
+            // Update selected projects
+            var newSelected = this._getSelectedProjects();
+            this._setSelectedProjects(newSelected);
+            return _.difference(oldSelected, newSelected);
         },
 
         _destructor: function () {
