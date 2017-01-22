@@ -676,6 +676,9 @@ Name | Type | Description | Default
                             if (!selected[_id] && _node.hasAttribute('selected')) {
                                 _node.removeAttribute('selected');
                             }
+                            if (_node.classList.contains('move-out')) {
+                                _node.classList.remove('move-out');
+                            }
                             this._ioShowProjectNode(_node);
                             highlight.push(_node);
                         } else {
