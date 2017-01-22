@@ -882,10 +882,9 @@ Name | Type | Description | Default
                 },
 
                 _onHostKeydown: function (e) {
-                    e.stopPropagation();
-
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
+                            e.stopPropagation();
                             e.preventDefault();
                             this._focusedNode = this._getNextVisibleProject(
                                 this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
@@ -895,6 +894,7 @@ Name | Type | Description | Default
                             }
                             break;
                         case Keycodes.UP:
+                            e.stopPropagation();
                             e.preventDefault();
                             this._focusedNode = this._getPrevVisibleProject(
                                 this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).lastChild
@@ -904,6 +904,7 @@ Name | Type | Description | Default
                             }
                             break;
                         case Keycodes.LEFT:
+                            e.stopPropagation();
                             e.preventDefault();
                             this._setProjectSelected(e.target.getAttribute('data-id'), true);
                             this.async(function () {
@@ -923,8 +924,6 @@ Name | Type | Description | Default
                 },
 
                 _onFilterKeydown: function (e) {
-                    e.stopPropagation();
-
                     switch (e.keyCode) {
                         case Keycodes.DOWN:
                             e.preventDefault();

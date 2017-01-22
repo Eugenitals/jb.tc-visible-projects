@@ -19,6 +19,7 @@
     <link rel="import" href="../../iron-icons/iron-icons.html">
     <link rel="import" href="../../iron-icon/iron-icon.html">
     <link rel="import" href="../../paper-button/paper-button.html">
+    <link rel="import" href="../../paper-toast/paper-toast.html">
     <link rel="import" href="../tc-visible-projects.html">
 
     <link rel="prefetch" href="./bookmark-outline.svg">
@@ -31,7 +32,9 @@
         }
     </style>
 </head>
-<body>
+<body tabindex="-1">
+
+<paper-toast id="toast" horizontal-align="right"></paper-toast>
 
 <div class="vertical-section-container">
     <demo-snippet>
@@ -115,6 +118,7 @@
             </div>
 
             <script>
+                var toast = document.querySelector('#toast');
                 var widget = document.querySelector('tc-visible-projects');
                 var resetBtn = document.querySelector('#resetBtn');
                 var okButton = document.querySelector('#okBtn');
@@ -125,6 +129,14 @@
 
                 resetBtn.addEventListener('click', function () {
                     widget.reset();
+                });
+
+                document.body.addEventListener('keydown', function (e) {
+                    if (e.keyCode === 13 && (e.metaKey || e.ctrlKey)) {
+                        widget.commit();
+                        toast.text = 'Changes saved'
+                        toast.open();
+                    }
                 });
             </script>
         </template>
