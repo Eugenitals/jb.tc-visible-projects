@@ -93,11 +93,11 @@
                 done();
             });
 
-            test('tcCustomVisibleProjects() returns visible projects template', function (done) {
+            test('_ioGetVisibleProjectHTML() returns visible projects template', function (done) {
                 var selector = fixture('tcCustomVisibleProjects');
                 assert.equal(
                     selector._ioGetVisibleProjectHTML({ id: 'ID', name: 'NAME', description: 'DESCRIPTION', level: 1 }).replace(/\s\s+/g, ' '),
-                    '<li class="project-item" data-id="ID" data-name="" data-level="" event-role="select" tabindex="-1"><div class="project-level-"><div class="project-item__template"> <span is-name=""></span>: <span>DESCRIPTION</span> </div><div class="project-item__order"><span class="project-item__order-arrow" event-role="index-up" data-id="ID" title="Move project up">▲</span><span class="project-item__order-arrow" event-role="index-down" data-id="ID" title="Move project down">▼</span></div></div></li>'
+                    '<li class="project-item" data-id="ID" data-name="" data-level="" event-role="select" tabindex="-1" selected><div class="project-level-"><div class="project-item__template"> <span is-name=""></span>: <span>DESCRIPTION</span> </div><div class="project-item__order" title="Change project position">:::::</div></div></li>'
                 )
                 done();
             });
