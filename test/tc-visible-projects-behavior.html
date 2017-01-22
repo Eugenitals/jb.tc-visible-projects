@@ -214,7 +214,7 @@
             done();
         });
 
-        suite('Down (and up) shifting', function () {
+        suite('setSelectedProjectIndex()', function () {
             var selection = [
                 "_Root",
                 "NetProductsExtensions_Trunk",
@@ -229,7 +229,7 @@
                 done();
             });
 
-            test('shifts project "down" inside parent', function (done) {
+            test('move project "down" inside parent', function (done) {
                 var shifted = [
                     "_Root",
                     "NetProductsExtensions_Trunk",
@@ -238,16 +238,22 @@
                     "IdeaAwsCloudFormation_Idea_14_15",
                     "NetCommunityProjects_Femah"
                 ];
-
                 Selector._setSelectedProjects(selection);
-                Selector.shiftProject("IdeaAwsCloudFormation_Idea_14_15");
-                Selector.shiftProject("IdeaAwsCloudFormation_Idea_14_15");
 
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Idea_14_15", 4);
                 assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Idea_14_15", 5);
+                assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+
+                // Placing child lower then parent will not lay down whole parent
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Idea_14_15", 6);
+                assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+
                 done();
             });
 
-            test('shifts project "up" inside parent', function (done) {
+            test('move project "up" inside parent', function (done) {
                 var shifted = [
                     "_Root",
                     "NetProductsExtensions_Trunk",
@@ -256,12 +262,17 @@
                     "IdeaAwsCloudFormation_Idea_14_15",
                     "NetCommunityProjects_Femah"
                 ];
-
                 Selector._setSelectedProjects(selection);
-                Selector.shiftProject("IdeaAwsCloudFormation_Master", true);
-                Selector.shiftProject("IdeaAwsCloudFormation_Master", true);
 
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Master", 2);
                 assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Master", 1);
+                assert.equal(Selector._getSelectedProjects().join(), shifted.join());
+
+                // Placing child above parent will lift up whole parent
+                Selector.setSelectedProjectIndex("IdeaAwsCloudFormation_Master", 0);
+                assert.notEqual(Selector._getSelectedProjects().join(), shifted.join());
                 done();
             });
         });

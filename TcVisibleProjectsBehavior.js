@@ -110,7 +110,7 @@ window.Polymer = window.Polymer || {};
             var selected = this._getSelectedProjects();
             if (!_.isNaN(index) && index > -1) {
                 selected.splice(selected.indexOf(projectId), 1);
-                selected.splice(index + 1, 0, projectId);
+                selected.splice(index + 1 /* Coz of Root */, 0, projectId);
             }
             this._setSelectedProjects(selected);
         },
