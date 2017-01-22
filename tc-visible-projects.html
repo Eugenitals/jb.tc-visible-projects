@@ -404,9 +404,17 @@ Name | Type | Description | Default
                     },
 
                     /**
-                     * Disable filtration highlighting useful for slow browsers (Hello IE)
+                     * Disable filtration highlighting. Useful for slow browsers (like IE9)
                      */
                     noHighlight: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    /**
+                     * Disable smooth scrolling. Useful for slow browsers (like IE9)
+                     */
+                    instantScroll: {
                         type: Boolean,
                         value: false
                     },
@@ -767,19 +775,27 @@ Name | Type | Description | Default
                         diff = firstNode.offsetTop - body.scrollTop - (body.offsetHeight - rangeHeight) / 2;
                     }
 
-                    var tik = 0;
-                    var scrollTikFn = function () {
-                        if (tik > SCROLL_TICKS) {
-                            if (_.isFunction(callback)) {
-                                callback(nodes);
+                    // Instant scroll
+                    if (this.instantScroll) {
+                        body.scrollTop = baseScroll + diff;
+                    }
+
+                    // Fast scroll (~100ms)
+                    else {
+                        var tik = 0;
+                        var scrollTikFn = function () {
+                            if (tik > SCROLL_TICKS) {
+                                if (_.isFunction(callback)) {
+                                    callback(nodes);
+                                }
+                                return;
                             }
-                            return;
-                        }
-                        body.scrollTop = baseScroll + diff * easeOutQuad(tik / SCROLL_TICKS);
-                        tik++;
-                        setTimeout(scrollTikFn, 10);
-                    };
-                    scrollTikFn();
+                            body.scrollTop = baseScroll + diff * easeOutQuad(tik / SCROLL_TICKS);
+                            tik++;
+                            setTimeout(scrollTikFn, 10);
+                        };
+                        scrollTikFn();
+                    }
                 },
 
                 _setProjectSelected: function (id, isSelected) {
