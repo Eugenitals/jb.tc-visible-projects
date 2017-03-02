@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+    <title>tc-visible-projects demo</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+
+    <script src="../../es6-shim/es6-shim.min.js"></script>
+    <script src="../../es6-shim/es6-sham.min.js"></script>
+    <!--[if IE]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/2014.01.31/classList.min.js"></script>
+    <![endif]-->
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+    <link rel="import" href="../../iron-icon/iron-icon.html">
+    <link rel="import" href="../../paper-button/paper-button.html">
+    <link rel="import" href="../../paper-toast/paper-toast.html">
+    <link rel="import" href="../tc-visible-projects.html">
+
+    <link rel="prefetch" href="./bookmark-outline.svg">
+    <link rel="prefetch" href="./bookmark-outline-inverted.svg">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+        demo-snippet {
+            width: 100%;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body tabindex="-1">
+
+<paper-toast id="toast" horizontal-align="right"></paper-toast>
+
+<div class="vertical-section-container">
+    <demo-snippet>
+        <template>
+            <style is="custom-style">
+                tc-visible-projects {
+                    --tc-primary-color-red: 88;
+                    --tc-primary-color-green: 137;
+                    --tc-primary-color-blue: 166;
+                    --tc-primary-text-color: #fff;
+
+/*                    --tc-project-selector-item-nth-even: {
+                        background-color: rgba(88, 137, 166, .05);
+                    };*/
+
+                    --tc-project-selector-item-template: {
+                        padding: 3px 3px 3px 23px;
+                        background-repeat: no-repeat;
+                        background-position: 0px 0px;
+                        background-size: 20px 20px;
+
+                        background-image: url('bookmark-outline.svg');
+                    };
+
+                    --tc-project-selector-item-template-selected: {
+                        background-image: url('bookmark-check.svg');
+                    };
+
+                    --tc-project-selector-item-template-focused: {
+                        background-image: url('bookmark-outline-inverted.svg');
+                    };
+                }
+
+                .hotkey-tip {
+                    font-size: .8em;
+                    opacity: .7;
+                }
+
+                #tools {
+                    padding-top: 12px;
+                    text-align: right;
+                }
+
+                #okBtn {
+                    background-color: #5889a6;
+                    color: #fff;
+                }
+
+                #resetBtn {
+                    width: 100px;
+                }
+
+                paper-button {
+                    padding: 10px 15px;
+                }
+            </style>
+
+            <!--[if IE]>
+            <style is="custom-style">
+                paper-button {
+                    text-align: center;
+                    display: inline-block;
+                }
+            </style>
+            <![endif]-->
+
+            <tc-visible-projects url="projects.json" debug>
+
+                <!--
+                    Example of group HTML customisation (only online styles supported).
+                    Attribute "is-name" required for filtration highlighting.
+                -->
+                <template name="group-template">
+                    <div class="project-item__template" is-name>${name}</div>
+                </template>
+
+            </tc-visible-projects>
+            <div id="tools">
+                <paper-button id="resetBtn">Reset</paper-button>
+                <paper-button id="okBtn" raised>Save Changes&nbsp;&nbsp;<span class="hotkey-tip">(⌘+⏎)</span></paper-button>
+            </div>
+
+            <script>
+                var toast = document.querySelector('#toast');
+                var widget = document.querySelector('tc-visible-projects');
+                var resetBtn = document.querySelector('#resetBtn');
+                var okButton = document.querySelector('#okBtn');
+
+                okButton.addEventListener('click', function () {
+                    widget.commit();
+                });
+
+                resetBtn.addEventListener('click', function () {
+                    widget.reset();
+                });
+
+                document.body.addEventListener('keydown', function (e) {
+                    if (e.keyCode === 13 && (e.metaKey || e.ctrlKey)) {
+                        widget.commit();
+                        toast.text = 'Changes saved'
+                        toast.open();
+                    }
+                });
+            </script>
+        </template>
+    </demo-snippet>
+</div>
+
+</body>
+</html>

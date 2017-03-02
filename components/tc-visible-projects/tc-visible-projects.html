@@ -1,0 +1,1039 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-localstorage/iron-localstorage.html">
+<link rel="import" href="../polymer-sortablejs/polymer-sortablejs.html">
+<link rel="import" href="./tc-visible-projects-behavior.html">
+
+<!--
+## tc-visible-projects
+Teamcity component - Configure Visible Projects
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+Name | Type | Description | Default
+----------------|-------------|----------
+`--tc-text-color` | Prop | Base text color | #000
+`--tc-primary-color-red` | Prop |  Primary color red component | 102
+`--tc-primary-color-green` | Prop |  Primary color green component | 102
+`--tc-primary-color-blue` | Prop |  Primary color blue component | 102
+`--tc-primary-text-color` | Prop |  Text color over primary color as background | #fff
+`--tc-project-selector-height` | Prop | Height of project tree (final height will be +30px) | 370px
+`--tc-project-selector-highlight-color` | Prop | Color of filtration highlight | #ffff80
+`--tc-project-selector-item-nth-even` | Mixin |  Applied to a project item container :nth-of-type(2n)  | {}
+`--tc-project-selector-item-template` | Mixin |  Applied to a project item  | {}
+`--tc-project-selector-item-template-selected` | Mixin |  Applied to a selected project item  | {}
+`--tc-project-selector-item-template-focused` | Mixin |  Applied to a project item :hover and :focus  | {}
+
+@demo demo/index.html
+-->
+
+<dom-module id="tc-visible-projects">
+    <template>
+        <style>
+            :host {
+                --tc-text-color: rgba(0,0,0,.87);
+                --tc-primary-color-red: 102;
+                --tc-primary-color-green: 102;
+                --tc-primary-color-blue: 102;
+                --tc-primary-text-color: #fff;
+
+                --tc-project-selector-height: 370px;
+                --tc-project-selector-highlight-color: #ffff80;
+
+                --tc-project-selector-item-focused: {
+                    position: relative;
+                    outline: 0;
+
+                    border-collapse: separate;
+                    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.14),
+                                0px 1px 5px 0px rgba(0, 0, 0, 0.12),
+                                0px 3px 1px -2px rgba(0, 0, 0, 0.2);
+
+                    color: var(--tc-primary-text-color);
+                    background-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+                };
+
+                --tc-project-selector-item-nth-even: {};
+
+                display: block;
+                outline: 0;
+                color: var(--tc-text-color);
+            }
+
+            #body {
+                width: 100%;
+
+                table-layout: fixed;
+                border-collapse: collapse;
+                border-spacing: 0;
+            }
+
+            #hiddenProjectsFilter {
+                display: block;
+                width: 100%;
+                height: 1.3em;
+
+                outline: none;
+                background-color: transparent;
+
+                margin: 0 0 1px 0;
+                padding: 0 0 1px 0;
+                font-size: inherit;
+
+                border: none;
+                border-bottom: 1px solid rgba(0,0,0,.12);
+            }
+            #hiddenProjectsFilter:focus {
+                margin-bottom: 0;
+
+                border-bottom-width: 2px;
+                border-bottom-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+            }
+
+            #searchIcon {
+                position: absolute;
+                top: 0;
+                right: 0;
+                z-index: 100;
+
+                width: 20px;
+                height: 20px;
+
+                opacity: .3;
+            }
+
+            #loader {
+                text-align: center;
+                padding-top: 12px;
+                font-size: .9em;
+            }
+            #loader img {
+                vertical-align: middle;
+            }
+
+            .text-secondary {
+                color: var(--tc-text-color, rgba(0,0,0,.54));
+            }
+
+            .href-action {
+                text-decoration: none;
+                color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+                border-bottom: 1px dotted rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+            }
+
+            .highlight {
+                background-color: var(--tc-project-selector-highlight-color);
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            .sortable-chosen {
+                border: 2px dashed rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+            }
+
+            .projects-container {
+                width: 50%;
+                border-left: 1px solid rgba(0,0,0,.12);
+                vertical-align: top;
+            }
+
+            .projects-container:first-of-type {
+                border-left: none;
+                padding-left: 0;
+            }
+
+            .projects-container__title {
+                position: relative;
+                font-size: 1.1em;
+                height: 25px;
+                padding: 0 16px;
+            }
+
+            .projects-container__body {
+                height: var(--tc-project-selector-height);
+                overflow: auto;
+                padding: 5px 16px 0;
+            }
+
+            .projects-container__selector {
+                position: relative;
+                outline: 0;
+                margin: 0;
+                padding: 0;
+            }
+
+            .projects-container__selector li {
+                list-style-type: none;
+            }
+
+            .project-item {
+                padding: 2px 5px;
+                cursor: default;
+            }
+            .project-item:nth-of-type(2n) {
+                @apply(--tc-project-selector-item-nth-even);
+            }
+            .project-item[disabled] {
+                opacity: .3;
+            }
+            .project-item[selected] .project-item__template {
+                @apply(--tc-project-selector-item-template-selected);
+            }
+            .project-item.move-out,
+            .project-item.move-in {
+                outline: 0;
+                background-color: rgba(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue), .1);
+            }
+
+            .projects-container__selector:not([dragged]) .project-item:hover,
+            .projects-container__selector:not([dragged]) .project-item:focus {
+                @apply(--tc-project-selector-item-focused);
+            }
+
+            .project-item__template {
+                @apply(--tc-project-selector-item-template);
+            }
+
+            .project-item__order {
+                display: none;
+                background-color: rgb(var(--tc-primary-color-red), var(--tc-primary-color-green), var(--tc-primary-color-blue));
+                padding-left: 3px;
+
+                font-size: .9em;
+                font-weight: bold;
+
+                opacity: .7;
+
+                position: absolute;
+                top: 6px;
+                right: 10px;
+
+                cursor: move;
+            }
+            .project-item__order:hover {
+                opacity: 1;
+            }
+
+            #visibleProjectsSelector:hover .project-item:not(.sortable-chosen):hover .project-item__order {
+                display: inline-block;
+            }
+
+            .project-item:focus .project-item__template,
+            .project-item:hover .project-item__template {
+                @apply(--tc-project-selector-item-template-focused);
+            }
+
+            .project-item:focus .highlight,
+            .project-item:hover .highlight {
+                background-color: inherit;
+            }
+
+            /* Hope 9 levels will be enough */
+            .project-level-1 { padding-left: 0px; }
+            .project-level-2 { padding-left: 20px; }
+            .project-level-3 { padding-left: 40px; }
+            .project-level-4 { padding-left: 60px; }
+            .project-level-5 { padding-left: 80px; }
+            .project-level-6 { padding-left: 100px; }
+            .project-level-7 { padding-left: 120px; }
+            .project-level-8 { padding-left: 140px; }
+            .project-level-9 { padding-left: 160px; }
+        </style>
+
+        <!--[if IE]>
+        <style>
+            #ieFilterPlaceholder {
+                color: gray;
+                pointer-events: none;
+                cursor: default;
+
+                position: absolute;
+                top: 0;
+                left: 20px;
+            }
+            #ieFilterPlaceholder.hidden {
+                display: none;
+            }
+
+        </style>
+        <![endif]-->
+
+        <iron-localstorage id="selectedProjectsStore" name="tc-visible-projects:selected-projects"></iron-localstorage>
+
+        <table id="body">
+            <tbody>
+                <tr>
+                    <td class="projects-container">
+                        <div class="projects-container__title">
+                            <strong>My visible projects</strong>
+                        </div>
+                        <div id="visibleProjectsBody" class="projects-container__body">
+                            <ul id="visibleProjectsSelectorContainer" class="projects-container__selector"
+                                on-tap="_onVisibleProjectTapDelegator">
+                                <sortable-js id="visibleProjectsSelector" draggable=".project-item"
+                                             handle=".project-item__order"
+                                             on-start="_onProjectsDragStart"
+                                             on-end="_onProjectsDragEnd">
+                                    <!-- ...visible projects will be here... -->
+                                </sortable-js>
+                            </ul>
+                        </div>
+                    </td>
+
+                    <td class="projects-container">
+                        <div class="projects-container__title">
+                            <input id="hiddenProjectsFilter"
+                                   type="text" placeholder="Find projects by name..."
+                                   on-focus="_onFilterFocus"
+                                   on-keydown="_onFilterKeydown">
+
+                            <!-- Very special placeholder for IE -->
+                            <!--[if IE]>
+                            <span id="ieFilterPlaceholder"
+                                  on-click="_ieOnPlaceholderTap"
+                                  on-selectstart="_ieOnPlaceholderSelectionStart">
+                                Find projects by name...
+                            </span>
+                            <![endif]-->
+
+                            <!-- Just meaningful icon -->
+                            <iron-icon id="searchIcon" icon="icons:search"></iron-icon>
+                        </div>
+
+                        <div id="hiddenProjectsBody" class="projects-container__body">
+
+                            <template is="dom-if" if="[[_isLoading]]">
+                                <div id="loader" class="text-secondary">
+                                    <img src="img/ajax-loader.gif"> Loading projects...
+                                </div>
+                            </template>
+
+                            <ul id="hiddenProjectsSelector" class="projects-container__selector hidden"
+                                on-tap="_onHiddenProjectTapDelegator">
+                                <!-- ...hidden projects will be here... -->
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </template>
+
+    <script>
+        (function () {
+            var Keycodes = {
+                UP: 38,
+                LEFT: 37,
+                DOWN: 40,
+                ENTER: 13,
+                ESC: 27
+            };
+
+            var Classes = {
+                PROJECT: 'project-item',
+                PROJECT_TEMPLATE: 'project-item__template',
+                PROJECT_ORDER: 'project-item__order',
+                PROJECT_LEVEL_PREFIX: 'project-level-',
+                HIGHLIGHT: 'highlight',
+                HIDDEN: 'hidden'
+            };
+
+            var SCROLL_TICKS = 10;
+
+            var log = emptyFn;
+
+            function emptyFn() {}
+
+            function getDelegationInfo(target, delegator) {
+                var role;
+
+                while (target !== delegator) {
+                    if (target.hasAttribute('event-role')) {
+                        role = target.getAttribute('event-role');
+                        break;
+                    }
+                    target = Polymer.dom(target).parentNode;
+                }
+
+                if (role) {
+                    return { target: target, role: role };
+                }
+
+                return null;
+            }
+
+            // decelerating to zero velocity
+            function easeOutQuad (t) { return t*(2-t) }
+
+            Polymer({
+                /**
+                 * Save current selected projects into LocalStorage
+                 */
+                commit: function () {
+                    this.$.selectedProjectsStore.value = this._getSelectedProjects();
+                    this.$.selectedProjectsStore.save();
+                },
+
+                /**
+                 * Reload selected projects from LocalStorage
+                 */
+                reset: function () {
+                    this._initSelectedProjects();
+                },
+
+                is: 'tc-visible-projects',
+                behaviors: [ Polymer.jb.TcVisibleProjectsBehavior ],
+
+                properties: {
+                    /**
+                     * Url to load json data
+                     */
+                    url: String,
+
+                    /**
+                     * Filtration input debounce delay
+                     */
+                    delay: {
+                        type: Number,
+                        value: 100
+                    },
+
+                    /**
+                     * Disable filtration highlighting. Useful for slow browsers (like IE9)
+                     */
+                    noHighlight: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    /**
+                     * Disable smooth scrolling. Useful for slow browsers (like IE9)
+                     */
+                    instantScroll: {
+                        type: Boolean,
+                        value: false
+                    },
+
+                    /**
+                     * Highlight count per iteration.
+                     * Typically ~max simultaneously visible rows inside selector
+                     */
+                    highlightFactor: {
+                        type: Number,
+                        value: 30
+                    },
+
+                    /**
+                     * True - to enable logs
+                     */
+                    debug: {
+                        type: Boolean,
+                        value: false,
+                        observer: '_debugChanged'
+                    }
+                },
+
+                hostAttributes: {
+                    tabindex: 0
+                },
+
+                listeners: {
+                    'keydown': '_onHostKeydown',
+                },
+
+                /** @type {Number} */
+                _readyTs: NaN,
+
+                /** @type {String} */
+                _lastFilterValue: null,
+
+                /** @type {Boolean} */
+                _isLoading: false,
+
+                /** @type {Array<Node>} */
+                _projectsNodes: null,
+
+                /**
+                 * Template for hidden projects
+                 * @type {Function}
+                 */
+                _hiddenProjectTemplateFn: null,
+
+                /**
+                 * Template for visible projects
+                 * @type {Function}
+                 */
+                _visibleProjectTemplateFn: null,
+
+                /** @type {Object} */
+                _highlightJob: null,
+
+                /** @type {Node} */
+                _focusedNode: null,
+
+                ready: function () {
+                    this._readyTs = (new Date()).getTime();
+                    this._projectsNodes = [];
+                    this._initProjectTemplate();
+                    this._initSelectedProjects();
+                    this._loadProjects(this.url);
+                },
+
+                attached: function () {
+                    // Ensure local DOM initialized
+                    this.async(function () {
+                        this.$.hiddenProjectsFilter.focus();
+
+                        // Otherwise it won`t be able to cancel item move... DAMN DEVELOPERS!
+                        this.$.visibleProjectsSelector.sortable.options.onMove = this._onProjectDragMove.bind(this);
+                    }, 1);
+                },
+
+                detached: function () {
+                    this._destructor();
+                    this._projectsNodes = null;
+                },
+
+                _ioSetLoading: function (isOn) {
+                    this._isLoading = isOn;
+                },
+
+                _ioGetFilter: function () {
+                    return this.$.hiddenProjectsFilter.value.trim();
+                },
+
+                /**
+                 * Fired when error is thrown.
+                 *
+                 *     'event.detail.message' {String} error message
+                 *     'event.detail.code' {String} error code
+                 *
+                 * @event error
+                 */
+
+                /**
+                 * Dispatch 'error' event
+                 * @param message {String}
+                 * @param code {String}
+                 */
+                _ioFireError: function (message, code) {
+                    this.fire('error', { message: message, code: code });
+                    log(code + ': \'' + message + '\'');
+                },
+
+
+                /**
+                 * Compile hidden project HTML using template
+                 * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @param level {Number}
+                 * @return {String} valid raw HTML
+                 */
+                _ioGetHiddenProjectHTML: function (project, level) {
+                    return this._hiddenProjectTemplateFn(_.create(project, { _level: level }));
+                },
+
+
+                /**
+                 * Compile visible project HTML using template
+                 * @param project {{id: String, name: String, parentProjectId: String, description: String, href: String, webUrl: String, }}
+                 * @param level {Number}
+                 * @return {String} valid raw HTML
+                 */
+                _ioGetVisibleProjectHTML: function (project, name, level) {
+                    return this._visibleProjectTemplateFn(_.create(project, { name: name, _level: level }));
+                },
+
+                /**
+                 * Render hidden projects list inside selector
+                 * @param html {Array<String>} list of HTML strings
+                 */
+                _ioRenderHiddenProjects: function (html) {
+                    Polymer.dom(this.$.hiddenProjectsSelector).innerHTML = html.join('');
+                    this._projectsNodes = this.$.hiddenProjectsSelector.childNodes;
+
+                    this.async(function () {
+                        log('Initial render time: ', (new Date()).getTime() - this._readyTs);
+                    }, 1);
+                },
+
+                _ioRenderVisibleProjects: function (html) {
+                    Polymer.dom(this.$.visibleProjectsSelector).innerHTML = html.join('');
+                },
+
+                _ioHideProjectNode: function (node) {
+                    node.style.display = 'none';
+                },
+
+                _ioShowProjectNode: function (node) {
+                    node.style.display = '';
+                },
+
+                /**
+                 * Applies current filter if it was changed
+                 * @param [forced] {Boolean} true - to skip filter dirty checking
+                 */
+                _ioApplyCurrentFilter: function (forced) {
+                    // Prevent highlight progress
+                    this.cancelAsync(this._highlightJob);
+
+                    var filter = this._ioGetFilter();
+                    var isFilterChanged = filter !== this._lastFilterValue;
+
+                    // Coz we use "keyup" event we should ensure that our filter is changed
+                    if (!forced && !isFilterChanged) {
+                        return;
+                    }
+
+                    var isProgressive = forced ? false : filter.indexOf(this._lastFilterValue) === 0;
+                    this._lastFilterValue = filter;
+
+                    var ts = (new Date()).getTime();
+                    this._filterProjectsNodes(filter, isProgressive);
+                    log('Filtration time: ', (new Date()).getTime() - ts);
+
+                    // Reset scroll if filter was changed
+                    if (isFilterChanged) {
+                        this.$.hiddenProjectsBody.scrollTop = 0;
+                    }
+
+                    // Reveal selector on first apply
+                    this.$.hiddenProjectsSelector.classList.remove(Classes.HIDDEN);
+                },
+
+                _debugChanged: function (isOn) {
+                    if (isOn)  {
+                        log = console.log.bind(console) || emptyFn;
+                    } else {
+                        log = emptyFn;
+                    }
+                },
+
+                /**
+                 * Extract and prepare template from Light DOM
+                 * <template name="group-template"> ... </template>
+                 */
+                _initProjectTemplate: function () {
+                    var projectTemplate = this.queryEffectiveChildren('template[name="group-template"]');
+
+                    if (projectTemplate) {
+                        projectTemplate = projectTemplate.innerHTML.trim();
+                    } else {
+                        projectTemplate = '<div class="project-item__template" is-name>${name}</div>';
+                    }
+
+                    var hiddenProjectTemplate = [
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" ' +
+                            'event-role="select" tabindex="-1">',
+                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
+                                projectTemplate,
+                            '</div>',
+                        '</li>'
+                    ];
+                    var visibleProjectTemplate = [
+                        '<li class="' + Classes.PROJECT + '" data-id="${id}" data-name="${name}" data-level="${_level}" ' +
+                            'event-role="select" tabindex="-1" selected>',
+                            '<div class="' + Classes.PROJECT_LEVEL_PREFIX + '${_level}">',
+                                projectTemplate,
+                        '<div class="' + Classes.PROJECT_ORDER + '" title="Change project position">:::::</div>',
+                            '</div>',
+                        '</li>'
+                    ];
+
+                    this._hiddenProjectTemplateFn = _.template(hiddenProjectTemplate.join(''));
+                    this._visibleProjectTemplateFn = _.template(visibleProjectTemplate.join(''));
+                },
+
+                _initSelectedProjects: function () {
+                    this.$.selectedProjectsStore.reload();
+                    this._setSelectedProjects(this.$.selectedProjectsStore.value);
+                },
+
+                /**
+                 * Show/hide hidden projects nodes based on filter
+                 * @param filter {String}
+                 * @param [isProgressive] {Boolean}
+                 */
+                _filterProjectsNodes: function (filter, isProgressive) {
+                    var filtered = this._getFilteredProjects(filter, isProgressive);
+                    var selected = this._getSelectedProjectsMap();
+                    var highlight = [];
+                    var filterParts = filter.split(' ');
+                    var _node, _id;
+
+                    for (var i = 0, len = this._projectsNodes.length; i < len; i++) {
+                        _node = this._projectsNodes[i];
+                        _id = _node.getAttribute('data-id');
+
+                        if (filtered[_id]) {
+                            if (selected[_id] && !_node.hasAttribute('selected')) {
+                                _node.setAttribute('selected', true);
+                            }
+                            if (!selected[_id] && _node.hasAttribute('selected')) {
+                                _node.removeAttribute('selected');
+                            }
+                            if (_node.classList.contains('move-out')) {
+                                _node.classList.remove('move-out');
+                            }
+                            this._ioShowProjectNode(_node);
+                            highlight.push(_node);
+                        } else {
+                            this._ioHideProjectNode(_node);
+                        }
+                    }
+
+                    // Highlighting is heavy, so do it async to prevent UI blocks
+                    if (! this.noHighlight) {
+                        this._highlightJob = this.async(function () {
+                            this._highlightProjects(highlight, filterParts);
+                        }, 1);
+                    }
+                },
+
+                /**
+                 * Iteratively highlight all nodes (non blocking UI)
+                 * @param nodes {Array<Element>}
+                 * @param [highlight] {Array<String>} strings to highlight
+                 */
+                _highlightProjects: function (nodes, highlight, step) {
+                    step = step || 0;
+
+                    var stepSize = this.highlightFactor;
+                    var index = step * stepSize;
+                    var length = index + stepSize > nodes.length
+                        ? nodes.length
+                        : index + stepSize;
+
+                    while (index < length) {
+                        this._highlightProject(nodes[index], highlight);
+                        index++;
+                    }
+
+                    // Next iteration
+                    if (!(index >= nodes.length - 1)) {
+                        this._highlightJob = this.async(function () {
+                            this._highlightProjects(nodes, highlight, step + 1);
+                        }, 1);
+                    }
+                },
+
+                /**
+                 * Highlight node name
+                 * @param node {Element}
+                 * @param [highlight] {Array<String>} strings to highlight
+                 */
+                _highlightProject: function (node, highlight) {
+                    var name = node.getAttribute('data-name');
+                    var nameParts = [];
+
+                    if (highlight) {
+                        var _nameTail = name;
+                        var _highlight, _exec, _matched;
+
+                        for (var i = 0, len = highlight.length; i < len; i++) {
+                            _highlight = highlight[i];
+                            _exec = new RegExp('(' + _.escapeRegExp(_highlight) + ')', 'i').exec(_nameTail);
+
+                            if (_exec) {
+                                _matched = _exec[1/* take only first match */];
+                                nameParts.push(_nameTail.substr(0, _exec.index)
+                                    + '<span class="' + Classes.HIGHLIGHT + '">' + _matched + '</span>');
+                                _nameTail = _nameTail.substr(_exec.index + _matched.length);
+                            }
+                        }
+
+                        nameParts.push(_nameTail);
+                    } else {
+                        nameParts.push(name)
+                    }
+
+                    Polymer.dom(Polymer.dom(node).querySelector('[is-name]')).innerHTML = nameParts.join('');
+                },
+
+                /**
+                 * Scroll to nodes inside body
+                 * @param nodes {Array<Element>}
+                 * @param body {Element}
+                 * @param [callback] {Function}
+                 */
+                _scrollToNodes: function (nodes, body, callback) {
+                    if (! nodes || !nodes.length) {
+                        return;
+                    }
+
+                    var baseScroll = body.scrollTop;
+                    var firstNode = nodes[0];
+                    var lastNode = nodes[nodes.length - 1];
+                    var range = [firstNode.offsetTop, lastNode.offsetTop + lastNode.offsetHeight];
+                    var rangeHeight = range[1] - range[0];
+                    var diff;
+
+                    if (rangeHeight >= body.offsetHeight) {
+                        diff = firstNode.offsetTop - body.scrollTop;
+                    } else {
+                        diff = firstNode.offsetTop - body.scrollTop - (body.offsetHeight - rangeHeight) / 2;
+                    }
+
+                    // Instant scroll
+                    if (this.instantScroll) {
+                        body.scrollTop = baseScroll + diff;
+                    }
+
+                    // Fast scroll (~100ms)
+                    else {
+                        var tik = 0;
+                        var scrollTikFn = function () {
+                            if (tik > SCROLL_TICKS) {
+                                if (_.isFunction(callback)) {
+                                    callback(nodes);
+                                }
+                                return;
+                            }
+                            body.scrollTop = baseScroll + diff * easeOutQuad(tik / SCROLL_TICKS);
+                            tik++;
+                            setTimeout(scrollTikFn, 10);
+                        };
+                        scrollTikFn();
+                    }
+                },
+
+                _setProjectSelected: function (id, isSelected) {
+                    var ids;
+
+                    if (isSelected && (ids = this._selectProject(id))) {
+                        this.async(function () {
+                            var _node;
+                            this._scrollToNodes(ids.map(function (_id) {
+                                _node = this.$$('[data-id="' + _id +'"]');
+                                _node.classList.add('move-in');
+                                return _node;
+                            }, this), this.$.visibleProjectsBody);
+                        }, 1);
+                    }
+
+                    if (!isSelected && (ids = this._unselectProject(id))){
+                        this.async(function () {
+                            var _node;
+                            this._scrollToNodes(ids.map(function (_id) {
+                                _node = this.$$('[data-id="' + _id +'"]');
+                                _node.classList.add('move-out');
+                                return _node;
+                            }, this), this.$.hiddenProjectsBody);
+                        }, 1);
+                    }
+                },
+
+                /**
+                 * @param [node] {Element}
+                 * @param container {Element}
+                 * @return {Node} next visible node
+                 */
+                _getNextVisibleProject: function (node, container) {
+                    if (node) {
+                        node = Polymer.dom(node).nextSibling;
+                    } else {
+                        node = Polymer.dom(container).firstChild;
+                    }
+
+                    while (node) {
+                        if (node.style.display !== 'none') {
+                            break;
+                        }
+                        node = Polymer.dom(node).nextSibling;
+                    }
+
+                    if (! node) {
+                        if (this._projectsNodes.length < 1) {
+                            return null;
+                        }
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).firstChild;
+                    }
+
+                    return node;
+                },
+
+                /**
+                 * @param [node] {Element}
+                 * @param container {Element}
+                 * @return {Node} previous visible node
+                 */
+                _getPrevVisibleProject: function (node, container) {
+                    if (node) {
+                        node = Polymer.dom(node).previousSibling;
+                    } else {
+                        node = Polymer.dom(container).lastChild;
+                    }
+
+                    while (node) {
+                        if (node.style.display !== 'none') {
+                            break;
+                        }
+                        node = Polymer.dom(node).previousSibling;
+                    }
+
+                    if (! node) {
+                        if (this._projectsNodes.length < 1) {
+                            return null;
+                        }
+                        node = Polymer.dom(this.$.hiddenProjectsSelector).lastChild;
+                    }
+
+                    return node;
+                },
+
+                _onHostKeydown: function (e) {
+                    switch (e.keyCode) {
+                        case Keycodes.DOWN:
+                            e.preventDefault();
+                            this._focusedNode = this._getNextVisibleProject(
+                                this._focusedNode || Polymer.dom(this.$.hiddenProjectsSelector).firstChild
+                            )
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
+                            break;
+                        case Keycodes.UP:
+                            e.preventDefault();
+                            this._focusedNode = this._getPrevVisibleProject(this._focusedNode, this.$.hiddenProjectsSelector);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
+                            break;
+                        case Keycodes.LEFT:
+                            e.preventDefault();
+                            this._setProjectSelected(e.target.getAttribute('data-id'), true);
+                            this.async(function () {
+                                this._focusedNode = this._getNextVisibleProject(this._focusedNode, this.$.hiddenProjectsSelector);
+                                if (this._focusedNode) {
+                                    this._focusedNode.focus();
+                                }
+                            }, 10);
+                            break;
+                        case Keycodes.ESC:
+                            e.preventDefault();
+                            this.$.hiddenProjectsFilter.focus();
+                            break;
+                    }
+                },
+
+                _onFilterKeydown: function (e) {
+                    switch (e.keyCode) {
+                        case Keycodes.DOWN:
+                            e.stopPropagation();
+                            e.preventDefault();
+                            this._focusedNode = this._getNextVisibleProject(null, this.$.hiddenProjectsSelector);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
+                            break;
+                        case Keycodes.UP:
+                            e.stopPropagation();
+                            e.preventDefault();
+                            this._focusedNode = this._getPrevVisibleProject(null, this.$.hiddenProjectsSelector);
+                            if (this._focusedNode) {
+                                this._focusedNode.focus();
+                            }
+                            break;
+                        default:
+                            this.debounce('applyFilterOnInput', function () {
+                                this._ioApplyCurrentFilter();
+                            }, this.delay);
+                    }
+
+                    /* IE Placeholder show/hide */
+                    if (this.$.ieFilterPlaceholder) {
+                        if (!!e.target.value) {
+                            this.$.ieFilterPlaceholder.classList.add(Classes.HIDDEN);
+                        } else {
+                            this.$.ieFilterPlaceholder.classList.remove(Classes.HIDDEN);
+                        }
+                    }
+                },
+
+                _onFilterFocus: function (e) {
+                    e.target.select();
+                },
+
+                _onHiddenProjectTapDelegator: function (e) {
+                    e.stopPropagation();
+                    var info = getDelegationInfo(e.target, this.$.hiddenProjectsSelector);
+
+                    if (info && info.role === 'select') {
+                        this._setProjectSelected(info.target.getAttribute('data-id'), true);
+                        this._focusedNode = this._getNextVisibleProject(info.target, this.$.hiddenProjectsSelector);
+                        this.async(function () {
+                            this.focus();
+                        }, 100);
+                    }
+                },
+
+                _onVisibleProjectTapDelegator: function (e) {
+                    e.stopPropagation();
+                    var info = getDelegationInfo(e.target, this.$.visibleProjectsSelector);
+
+                    if (info) {
+                        if (info.role === 'select') {
+                            this._setProjectSelected(info.target.getAttribute('data-id'), false);
+                        }
+                    }
+                },
+
+                _onProjectDragMove: function (e) {
+                    var to = e.related;
+                    if (to.hasAttribute('disabled')) {
+                        return false;
+                    }
+                },
+
+                _onProjectsDragStart: function (e) {
+                    if (e.detail) {
+                        return; // If not Polymer event
+                    }
+
+                    var item = e.item;
+                    var itemId = item.getAttribute('data-id');
+                    var sibilings = this._getProjectSibilings(itemId);
+
+                    Polymer.dom(this.$.visibleProjectsSelector).children.forEach(function (_node) {
+                        if (sibilings.indexOf(_node.getAttribute('data-id')) === -1) {
+                            _node.setAttribute('disabled', true);
+                        }
+                    }, this);
+
+                    this.$.visibleProjectsSelectorContainer.setAttribute('dragged', true);
+                },
+
+                _onProjectsDragEnd: function (e) {
+                    if (e.detail) {
+                        return; // If not Polymer event
+                    }
+
+                    var item = e.item;
+                    var itemId = item.getAttribute('data-id');
+                    this.$.visibleProjectsSelectorContainer.removeAttribute('dragged');
+                    this.setSelectedProjectIndex(itemId, e.newIndex);
+                },
+
+                /**
+                 * Refocus input below
+                 */
+                _ieOnPlaceholderTap: function (e) {
+                    e.stopPropagation();
+                    this.$.hiddenProjectsFilter.focus();
+                },
+
+                /**
+                 * Prevent placeholder text selection
+                 */
+                _ieOnPlaceholderSelectionStart: function (e) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        })()
+    </script>
+</dom-module>
