@@ -607,7 +607,7 @@ Name | Type | Description | Default
 
                 _debugChanged: function (isOn) {
                     if (isOn)  {
-                        log = console.log || emptyFn;
+                        log = console.log.bind(console) || emptyFn;
                     } else {
                         log = emptyFn;
                     }
